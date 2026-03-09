@@ -240,15 +240,44 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
   </div>
 </div>
 
-<!-- Venue popup -->
+<!-- Ticket Screen (replaces venue popup) -->
 
-<div class="popup-overlay" id="venuePop">
-  <div class="popup-card venue">
-    <div class="popup-title pk" id="pVenueTitle">RED ROCKS</div>
-    <div class="popup-sub" id="pVenueSub">The Midnight · $65</div>
-    <div class="popup-btns">
-      <button class="pop-btn main" id="pAttendBtn" onclick="attendShow()">🎸 ATTEND SHOW <span class="amt" id="pPrice"></span></button>
-      <button class="pop-btn skip" onclick="skipVenue()">▶ SKIP — HIT THE ROAD</button>
+<div id="ticketScreen" style="display:none;position:fixed;inset:0;background:rgba(0,0,8,0.97);z-index:95;align-items:center;justify-content:center;flex-direction:column;">
+  <div id="ticketWrap" style="position:relative;width:min(340px,90vw);">
+    <!-- Ticket body top half -->
+    <div id="ticketTop" style="background:linear-gradient(135deg,#1a0028,#0a0018);border:2px solid rgba(255,45,120,0.6);border-bottom:none;border-radius:12px 12px 0 0;padding:24px 22px 18px;position:relative;overflow:hidden;">
+      <!-- Neon border glow -->
+      <div style="position:absolute;inset:0;border-radius:12px 12px 0 0;box-shadow:inset 0 0 30px rgba(255,45,120,0.15);pointer-events:none;"></div>
+      <!-- Stars bg -->
+      <canvas id="ticketStars" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0.4;"></canvas>
+      <div style="position:relative;z-index:1;">
+        <div style="font-size:9px;letter-spacing:4px;color:rgba(255,45,120,0.6);margin-bottom:6px;text-align:center;">CONCERT QUEST PRESENTS</div>
+        <div id="tkArtist" style="font-family:'Orbitron',sans-serif;font-size:clamp(18px,5vw,28px);font-weight:900;color:#fff;text-align:center;text-shadow:0 0 20px rgba(255,45,120,0.8);letter-spacing:2px;margin-bottom:8px;"></div>
+        <div id="tkVenue" style="font-size:11px;letter-spacing:3px;color:#00f5ff;text-align:center;text-shadow:0 0 10px rgba(0,245,255,0.6);margin-bottom:4px;"></div>
+        <div id="tkCity" style="font-size:9px;color:rgba(255,255,255,0.4);text-align:center;letter-spacing:2px;margin-bottom:16px;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
+          <div><div style="font-size:7px;color:rgba(255,45,120,0.5);letter-spacing:2px;">TICKET PRICE</div><div id="tkPrice" style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#fff01f;text-shadow:0 0 10px rgba(255,240,31,0.7);"></div></div>
+          <div style="text-align:right;"><div style="font-size:7px;color:rgba(255,45,120,0.5);letter-spacing:2px;">ADMIT ONE</div><div style="font-size:22px;">🎸</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Tear line -->
+    <div id="ticketTearLine" style="position:relative;background:#0a0018;border-left:2px solid rgba(255,45,120,0.6);border-right:2px solid rgba(255,45,120,0.6);height:28px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 8px,rgba(255,45,120,0.35) 8px,rgba(255,45,120,0.35) 10px);"></div>
+      <div style="position:relative;z-index:1;font-size:8px;letter-spacing:3px;color:rgba(255,45,120,0.7);">— SWIPE HERE TO TEAR —</div>
+      <!-- Tear progress overlay -->
+      <div id="tearProgress" style="position:absolute;left:0;top:0;height:100%;width:0%;background:rgba(255,45,120,0.4);transition:none;z-index:2;"></div>
+    </div>
+    <!-- Ticket stub bottom half -->
+    <div id="ticketBottom" style="background:linear-gradient(135deg,#0d001a,#060010);border:2px solid rgba(255,45,120,0.6);border-top:none;border-radius:0 0 12px 12px;padding:14px 22px 18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><div style="font-size:7px;color:rgba(255,255,255,0.3);letter-spacing:2px;">KEEP THIS STUB</div><div style="font-family:'Orbitron',sans-serif;font-size:10px;color:rgba(255,45,120,0.6);">CONCERT QUEST</div></div>
+        <div style="text-align:right;font-size:7px;color:rgba(255,255,255,0.2);letter-spacing:1px;line-height:1.8;">VALID<br>ONE SHOW<br>ONLY</div>
+      </div>
+    </div>
+    <!-- Skip button below ticket -->
+    <div style="text-align:center;margin-top:18px;">
+      <button onclick="skipVenue()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.35);font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:3px;padding:8px 20px;border-radius:4px;cursor:pointer;">▶ SKIP — HIT THE ROAD</button>
     </div>
   </div>
 </div>
@@ -588,7 +617,7 @@ var ROADS=[
    BUS (player vehicle — Space Rangers ship physics)
 ═══════════════════════════════════════════════════════════ */
 var bus={
-  x:2112, y:2560,  // near Denver
+  x:4672, y:5200,  // just south of Florida
   vx:0, vy:0,
   angle:-Math.PI/2,
   thrusting:false,
@@ -751,24 +780,30 @@ function randomEvent(){
 function openVenue(idx){
   popOpen=true;nearVenueIdx=idx;
   var v=VENUES[idx];
-  document.getElementById('pVenueTitle').textContent=v.name.toUpperCase()+' — '+v.city;
-  document.getElementById('pVenueSub').textContent=v.artist+' · $'+v.price;
-  document.getElementById('pPrice').textContent='$'+v.price;
-  document.getElementById('venuePop').classList.add('show');
+  document.getElementById('tkArtist').textContent=v.artist;
+  document.getElementById('tkVenue').textContent=v.name.toUpperCase();
+  document.getElementById('tkCity').textContent=v.city.toUpperCase();
+  document.getElementById('tkPrice').textContent='$'+v.price;
+  var ts=document.getElementById('ticketScreen');
+  ts.style.display='flex';
+  initTicketStars();
+  setupTicketTear();
 }
 function skipVenue(){
-  document.getElementById('venuePop').classList.remove('show');
+  document.getElementById('ticketScreen').style.display='none';
   popOpen=false;
   bus.x+=Math.cos(bus.angle+Math.PI)*200;
   bus.y+=Math.sin(bus.angle+Math.PI)*200;
 }
 function attendShow(){
   var v=VENUES[nearVenueIdx];
-  if(money<v.price){showAlert('NOT ENOUGH CASH!',3000);skipVenue();return;}
+  if(money<v.price){showAlert('NOT ENOUGH CASH! -SKIPPING',3000);skipVenue();return;}
   money-=v.price;
-  document.getElementById('venuePop').classList.remove('show');
+  document.getElementById('ticketScreen').style.display='none';
   popOpen=false;
   updateHUD();
+  // Pause road trip music
+  if(ytPlayer&&ytPlayer.pauseVideo){ytPlayer.pauseVideo();}
   launchConcertGame(nearVenueIdx);
 }
 
@@ -1309,19 +1344,85 @@ document.getElementById('zoomOut').addEventListener('click',function(){manualZoo
    START GAME
 ═══════════════════════════════════════════════════════════ */
 function startGame(){
-  bus.x=2112;bus.y=2560;bus.vx=0;bus.vy=0;bus.angle=-Math.PI/2;bus.trail=[];
+  bus.x=4672;bus.y=5200;bus.vx=0;bus.vy=0;bus.angle=-Math.PI/2;bus.trail=[];
   money=1000;showsHit=0;miles=0;playlist=[];attended={};
   nearVenueIdx=-1;nearCityName='';popOpen=false;
   gasLevel=5;gasDrainAcc=0;lastEvent=Date.now();
   particles=[];
-  CAM.x=bus.x;CAM.y=bus.y;CAM.zoom=0.7;targetZoom=0.7;manualZoom=0.7;
+  CAM.x=4672;CAM.y=5200;CAM.zoom=0.7;targetZoom=0.7;manualZoom=0.7;
   updateHUD();
   gameActive=true;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MINI-GAME ENGINE
+   TICKET SCREEN — TEAR ANIMATION
 ═══════════════════════════════════════════════════════════ */
+var ticketTearX=0,ticketTearing=false,ticketTearPct=0;
+
+function initTicketStars(){
+  var tc=document.getElementById('ticketStars');
+  var tw=tc.parentElement.offsetWidth||340;
+  var th=tc.parentElement.offsetHeight||180;
+  tc.width=tw;tc.height=th;
+  var tx=tc.getContext('2d');
+  tx.clearRect(0,0,tw,th);
+  for(var i=0;i<60;i++){
+    var sx=Math.random()*tw,sy=Math.random()*th,sr=Math.random()*1.4+0.3;
+    tx.beginPath();tx.arc(sx,sy,sr,0,6.28);
+    tx.fillStyle='rgba(255,255,255,'+(Math.random()*0.6+0.2)+')';tx.fill();
+  }
+}
+
+function setupTicketTear(){
+  ticketTearPct=0;ticketTearing=false;
+  document.getElementById('tearProgress').style.width='0%';
+  var tearEl=document.getElementById('ticketTearLine');
+  var wrap=document.getElementById('ticketWrap');
+  function getX(e){var r=tearEl.getBoundingClientRect();var src=e.touches?e.touches[0]:e;return src.clientX-r.left;}
+  function onDown(e){
+    var r=tearEl.getBoundingClientRect();
+    var src=e.touches?e.touches[0]:e;
+    if(src.clientY>=r.top-10&&src.clientY<=r.bottom+10){ticketTearing=true;ticketTearX=getX(e);}
+  }
+  function onMove(e){
+    if(!ticketTearing)return;
+    e.preventDefault();
+    var x=getX(e);
+    var w=tearEl.offsetWidth||300;
+    ticketTearPct=Math.max(ticketTearPct,Math.min(100,(x/w)*100));
+    document.getElementById('tearProgress').style.width=ticketTearPct+'%';
+    if(ticketTearPct>=90){
+      ticketTearing=false;
+      // Rip animation
+      wrap.style.transition='transform 0.3s ease,opacity 0.3s';
+      var topEl=document.getElementById('ticketTop'),botEl=document.getElementById('ticketBottom');
+      topEl.style.transition='transform 0.35s ease,opacity 0.35s';
+      botEl.style.transition='transform 0.35s ease,opacity 0.35s';
+      topEl.style.transform='translateY(-60px) rotate(-3deg)';topEl.style.opacity='0';
+      botEl.style.transform='translateY(60px) rotate(3deg)';botEl.style.opacity='0';
+      setTimeout(function(){
+        topEl.style.transform='';topEl.style.opacity='';
+        botEl.style.transform='';botEl.style.opacity='';
+        topEl.style.transition='';botEl.style.transition='';
+        attendShow();
+      },380);
+    }
+  }
+  function onUp(){ticketTearing=false;}
+  // Remove old listeners by cloning
+  var nc=tearEl.cloneNode(true);tearEl.parentNode.replaceChild(nc,tearEl);
+  var fullDoc=document.getElementById('ticketScreen');
+  var nf=fullDoc.cloneNode(false);
+  // Use ticketScreen for touch since tear zone is small
+  document.getElementById('ticketScreen').addEventListener('mousedown',onDown);
+  document.getElementById('ticketScreen').addEventListener('mousemove',onMove);
+  document.getElementById('ticketScreen').addEventListener('mouseup',onUp);
+  document.getElementById('ticketScreen').addEventListener('touchstart',onDown,{passive:true});
+  document.getElementById('ticketScreen').addEventListener('touchmove',onMove,{passive:false});
+  document.getElementById('ticketScreen').addEventListener('touchend',onUp);
+}
+
+
 var MG={
   id:null,fromBroke:false,fromMerch:false,
   canvas:null,ctx:null,raf:null,running:false,
@@ -2062,8 +2163,7 @@ function launchConcertGame(vIdx){
   document.getElementById('cgArtistName').textContent=v.artist;
   // Load jumbotron video for this venue
   if(v.ytUrl&&typeof YT!=='undefined'&&YT.Player){loadJumboPlayer(v.ytUrl);}
-  // Mute road trip music while at concert
-  if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(10);
+  // Road trip music already paused at ticket screen
   setupCgJoystick();showCharPicker();
 }
 function cgResize(){var hd=document.getElementById('cgHud'),ct=document.getElementById('cgControls');CG.CW=CG.canvas.width=window.innerWidth;CG.CH=CG.canvas.height=window.innerHeight-(hd?hd.offsetHeight:44)-(ct?ct.offsetHeight:140);CG.frontRowY=CG.CH*0.36;}
@@ -2129,9 +2229,9 @@ function cgHitPlayer(msg,hx,hy){CG.lives--;CG.player.stunTimer=1200;CG.player.y=
 function updateCgHud(){var h='';for(var i=0;i<3;i++)h+=(i<CG.lives?'♥':'♡');document.getElementById('cgLives').textContent=h;document.getElementById('cgBonus').textContent='$'+CG.bonusCash;document.getElementById('cgCharsLeft').textContent=''+(4-CG.charsUsed.length);}
 function cgReachFrontRow(){CG.running=false;if(CG.rafId)cancelAnimationFrame(CG.rafId);document.getElementById('frBonus').textContent=CG.bonusCash;document.getElementById('cgFrontRow').classList.remove('hidden');}
 function cgStayAndListen(){document.getElementById('cgFrontRow').classList.add('hidden');CG.running=false;document.getElementById('cgMsg').textContent='ENJOYING THE SHOW! TAP TO CONTINUE';cgDraw();document.getElementById('cgCanvas').addEventListener('click',cgContinueMap,{once:true});document.getElementById('cgCanvas').addEventListener('touchend',cgContinueMap,{once:true,passive:true});}
-function cgContinueMap(){document.getElementById('cgFrontRow').classList.add('hidden');document.getElementById('cgFail').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(Math.round(musicVolume*100));var vIdx=CG.venueIdx;attended[vIdx]=true;showsHit++;playlist.push(VENUES[vIdx].artist+' @ '+VENUES[vIdx].name);CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert(VENUES[vIdx].artist+' WAS INCREDIBLE! +$'+CG.bonusCash,3000);spawnParts(bus.x,bus.y,25,['#ff2d78','#fff01f','#39ff14'],6);if(showsHit>=10){setTimeout(winGame,1400);}}
+function cgContinueMap(){document.getElementById('cgFrontRow').classList.add('hidden');document.getElementById('cgFail').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer){ytPlayer.setVolume(Math.round(musicVolume*100));ytPlayer.unMute();ytPlayer.playVideo();}var vIdx=CG.venueIdx;attended[vIdx]=true;showsHit++;playlist.push(VENUES[vIdx].artist+' @ '+VENUES[vIdx].name);CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert(VENUES[vIdx].artist+' WAS INCREDIBLE! +$'+CG.bonusCash,3000);spawnParts(bus.x,bus.y,25,['#ff2d78','#fff01f','#39ff14'],6);if(showsHit>=10){setTimeout(winGame,1400);}}
 function cgFailShow(){CG.running=false;if(CG.rafId)cancelAnimationFrame(CG.rafId);document.getElementById('cgFail').classList.remove('hidden');}
-function cgFailBack(){document.getElementById('cgFail').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(Math.round(musicVolume*100));CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert('KICKED OUT! Concert missed.',3000);}
+function cgFailBack(){document.getElementById('cgFail').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer){ytPlayer.setVolume(Math.round(musicVolume*100));ytPlayer.unMute();ytPlayer.playVideo();}CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert('KICKED OUT! Concert missed.',3000);}
 function cgDraw(){
   var c=CG.ctx,W=CG.CW,H=CG.CH;if(!c||!W||!H)return;
   c.fillStyle='#030308';c.fillRect(0,0,W,H);
