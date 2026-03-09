@@ -415,6 +415,8 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
   <!-- Jumbotron YouTube iframe — positioned over canvas in the stage area -->
   <div id="cgJumbotron" style="position:absolute;top:44px;left:50%;transform:translateX(-50%);width:min(52vw,300px);height:min(29.25vw,169px);border:3px solid rgba(255,240,31,0.8);border-radius:4px;box-shadow:0 0 28px rgba(255,240,31,0.5),0 0 8px rgba(0,0,0,1);z-index:5;overflow:hidden;background:#000;">
     <div id="cgJumboPlayer" style="width:100%;height:100%;"></div>
+    <!-- Transparent overlay blocks touches from reaching the iframe -->
+    <div style="position:absolute;inset:0;z-index:10;touch-action:none;" ontouchstart="return false;" onclick="return false;"></div>
   </div>
   <div id="cgControls">
     <div id="cgJoystick"><div id="cgStick"></div></div>
@@ -804,6 +806,8 @@ function attendShow(){
   updateHUD();
   // Pause road trip music
   if(ytPlayer&&ytPlayer.pauseVideo){ytPlayer.pauseVideo();}
+  // Start concert video immediately on rip
+  if(v.ytUrl){loadJumboPlayer(v.ytUrl);}
   launchConcertGame(nearVenueIdx);
 }
 
@@ -2099,26 +2103,25 @@ function loadJumboPlayer(url){
   container.innerHTML='';
   var div=document.createElement('div');div.id='cgJumboInner';container.appendChild(div);
   var info=ytExtractGlobal(url);
-  if(!info){container.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:9px;padding:8px;text-align:center;">VIDEO</div>';return;}
-  // Must start muted for autoplay, then unmute on ready (browser policy)
-  var pvars={autoplay:1,playsinline:1,controls:1,mute:1,rel:0,modestbranding:1,origin:window.location.origin};
+  if(!info){return;}
+  // Oversized iframe (110%) hides YouTube UI chrome at edges
+  div.style.cssText='position:absolute;top:-5%;left:-5%;width:110%;height:110%;';
+  var pvars={autoplay:1,playsinline:1,controls:0,mute:1,rel:0,modestbranding:1,disablekb:1,fs:0,iv_load_policy:3,origin:window.location.origin};
   var vidId=undefined;
   if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
   else{vidId=info.id;pvars.loop=1;pvars.playlist=info.id;}
   var cfg={width:'100%',height:'100%',playerVars:pvars,events:{
     onReady:function(e){
       jumboReady=true;
-      e.target.setVolume(80);
       e.target.playVideo();
-      // Unmute after brief delay — allows autoplay to start then unmutes
-      setTimeout(function(){try{e.target.unMute();e.target.setVolume(80);}catch(ex){}},800);
+      setTimeout(function(){try{e.target.unMute();e.target.setVolume(85);}catch(ex){}},600);
     },
     onStateChange:function(e){
       if(e.data===YT.PlayerState.ENDED){e.target.playVideo();}
     }
   }};
   if(vidId)cfg.videoId=vidId;
-  try{jumboPlayer=new YT.Player('cgJumboInner',cfg);}catch(err){console.warn('Jumbo YT error:',err);}
+  try{jumboPlayer=new YT.Player('cgJumboInner',cfg);}catch(err){console.warn('Jumbo YT:',err);}
 }
 
 function stopJumboPlayer(){
@@ -2177,9 +2180,7 @@ function launchConcertGame(vIdx){
   var v=VENUES[vIdx];
   document.getElementById('cgVenueName').textContent=v.name.toUpperCase();
   document.getElementById('cgArtistName').textContent=v.artist;
-  // Load jumbotron — small delay ensures layout is painted before YT iframe inits
-  if(v.ytUrl){setTimeout(function(){loadJumboPlayer(v.ytUrl);},200);}
-  // Road trip music already paused at ticket screen
+  // Road trip music already paused; jumbotron loaded in attendShow
   setupCgJoystick();showCharPicker();
 }
 function cgResize(){var hd=document.getElementById('cgHud'),ct=document.getElementById('cgControls');CG.CW=CG.canvas.width=window.innerWidth;CG.CH=CG.canvas.height=window.innerHeight-(hd?hd.offsetHeight:44)-(ct?ct.offsetHeight:140);CG.frontRowY=CG.CH*0.36;}
