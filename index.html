@@ -348,7 +348,11 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
     <div id="mgProgressPct" style="font-family:'Orbitron',sans-serif;font-size:11px;color:#00f5ff;min-width:36px;">0%</div>
   </div>
   <!-- Canvas -->
-  <canvas id="mgCanvas" style="flex:1;display:block;touch-action:none;"></canvas>
+  <!-- Paint canvas (bottom) + mortar overlay canvas (top, pointer-events:none) -->
+  <div style="flex:1;position:relative;overflow:hidden;">
+    <canvas id="mgCanvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none;"></canvas>
+    <canvas id="mgMortarCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  </div>
   <!-- Done overlay -->
   <div id="mgDone" style="display:none;position:fixed;inset:0;background:rgba(0,0,10,0.92);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:28px;">
     <div id="mgDoneEmoji" style="font-size:52px;">💵</div>
@@ -1497,8 +1501,13 @@ function launchMiniGame(id,fromBroke,fromMerch){
   // Re-grab canvas/ctx after clone
   MG.canvas=document.getElementById('mgCanvas');
   MG.ctx=MG.canvas.getContext('2d');
+  var hdr2=document.getElementById('mgHeader');
+  var shellH=window.innerHeight-hdr2.offsetHeight-38;
   MG.canvas.width=window.innerWidth;
-  MG.canvas.height=window.innerHeight-document.getElementById('mgHeader').offsetHeight-38;
+  MG.canvas.height=shellH;
+  // Size mortar overlay too
+  var mc=document.getElementById('mgMortarCanvas');
+  mc.width=window.innerWidth;mc.height=shellH;
   // Now draw
   var inits={graffiti:initGraffiti,trash:initTrash,parking:initParking,windshield:initWindshield,pressure:initPressure,dogwalk:initDogwalk,merch:initMerch};
   (inits[id]||initGraffiti)();
@@ -1554,10 +1563,7 @@ function mgPointerUp(x,y){
   (g[MG.id]||mgPaintUp)(x,y);
 }
 
-/* ── SHARED PAINT BRUSH (graffiti / parking / pressure) ── */
-function mgPaintDown(x,y){MG.state.painting=true;MG.state.lx=x;MG.state.ly=y;mgPaintStroke(x,y,x,y);}
-function mgPaintMove(x,y){if(!MG.state.painting)return;mgPaintStroke(MG.state.lx,MG.state.ly,x,y);MG.state.lx=x;MG.state.ly=y;}
-function mgPaintUp(){MG.state.painting=false;}
+/* ── SHARED PAINT BRUSH (graffiti / pressure) ── */
 function mgPaintStroke(x1,y1,x2,y2){
   var c=MG.ctx,cfg=MG.state.paintCfg||{col:'rgba(245,240,230,1)',w:40};
   c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
@@ -1580,32 +1586,225 @@ function mgSampleCoverage(){
 /* ══════════════════════════════════════════
    GAME 1 — GRAFFITI PAINT-OVER
 ══════════════════════════════════════════ */
-var GRAFFITI_COLORS=['#ff2d78','#bf5fff','#ff6b1a','#fff01f','#00f5ff','#39ff14'];
+var GRAFFITI_COLORS=['#ff2d78','#bf5fff','#ff6b1a','#fff01f','#00f5ff','#39ff14','#ff0000','#ff8800'];
 var GRAFFITI_WORDS=['NEON','RAGE','SQUAD','VIBE','PUNK','ZONE','BZZZ','BYTE'];
+
+function hexToRgb(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  return parseInt(hex.substr(0,2),16)+','+parseInt(hex.substr(2,2),16)+','+parseInt(hex.substr(4,2),16);
+}
+function shadeCol(hex,amt){
+  var r=Math.max(0,Math.min(255,parseInt(hex.substr(1,2),16)+amt));
+  var g=Math.max(0,Math.min(255,parseInt(hex.substr(3,2),16)+amt));
+  var b=Math.max(0,Math.min(255,parseInt(hex.substr(5,2),16)+amt));
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+function sprayCircle(c,x,y,r,col,density){
+  density=density||120;
+  for(var i=0;i<density;i++){
+    var angle=Math.random()*Math.PI*2,dist=Math.pow(Math.random(),0.5)*r;
+    var alpha=0.55*(1-dist/r)*Math.random();
+    c.fillStyle='rgba('+hexToRgb(col)+','+alpha+')';
+    c.fillRect(x+Math.cos(angle)*dist,y+Math.sin(angle)*dist,1.8,1.8);
+  }
+}
+
+function drawDrip(c,x,y,h,col){
+  c.fillStyle=col;
+  c.beginPath();
+  c.moveTo(x-3,y);c.lineTo(x+3,y);
+  c.quadraticCurveTo(x+4,y+h*0.6,x+1.5,y+h);
+  c.quadraticCurveTo(x,y+h+5,x-1.5,y+h);
+  c.quadraticCurveTo(x-4,y+h*0.6,x-3,y);
+  c.fill();
+}
+
+function drawThrowup(c,txt,x,y,fs,fillCol,outlineCol){
+  // Throwup = hollow rounded bubble letters, fast 2-colour style
+  c.save();c.translate(x,y);
+  c.font='900 '+fs+'px Arial Black,Arial,sans-serif';
+  c.textAlign='center';c.textBaseline='middle';
+  // Fat black shadow
+  c.strokeStyle='rgba(0,0,0,0.9)';c.lineWidth=fs*0.32;c.lineJoin='round';c.strokeText(txt,3,4);
+  // Outline colour (thick)
+  c.strokeStyle=outlineCol;c.lineWidth=fs*0.26;c.lineJoin='round';c.strokeText(txt,0,0);
+  // Fill (semi-transparent so wall shows through slightly)
+  c.fillStyle=fillCol;c.globalAlpha=0.82;c.fillText(txt,0,0);c.globalAlpha=1;
+  // Inner highlight
+  c.fillStyle='rgba(255,255,255,0.22)';c.font='900 '+(fs*0.92)+'px Arial Black,Arial,sans-serif';
+  c.fillText(txt,-1,-fs*0.1);
+  c.restore();
+}
+
+function drawWildStyle(c,txt,x,y,fs,col1,col2){
+  // Wildstyle = angular, sheared letters with extensions
+  c.save();c.translate(x,y);
+  c.transform(1,0,-0.25,1,0,0); // italic shear
+  c.font='900 '+fs+'px Arial Black,Arial,sans-serif';
+  c.textAlign='center';c.textBaseline='middle';
+  // Multi-layer shadow for 3D depth
+  for(var i=6;i>=1;i--){
+    c.fillStyle='rgba(0,0,0,'+((7-i)*0.06)+')';
+    c.fillText(txt,i*1.5,i*1.5);
+  }
+  // Black stroke
+  c.strokeStyle='#000';c.lineWidth=fs*0.14;c.lineJoin='miter';c.miterLimit=2;c.strokeText(txt,0,0);
+  // Gradient fill col1→col2
+  var grd=c.createLinearGradient(-fs*2,-fs*0.5,-fs*2,fs*0.7);
+  grd.addColorStop(0,col1);grd.addColorStop(0.45,col2||col1);grd.addColorStop(1,shadeCol(col1,-80));
+  c.fillStyle=grd;c.fillText(txt,0,0);
+  // Sharp highlight stripe
+  c.fillStyle='rgba(255,255,255,0.28)';c.font='900 '+(fs*0.9)+'px Arial Black,Arial,sans-serif';
+  c.fillText(txt,-1,-fs*0.15);
+  // Serifs / extensions — horizontal bars at letter tops/bottoms
+  c.strokeStyle=col2||col1;c.lineWidth=4;
+  var tw=c.measureText(txt).width;
+  c.beginPath();c.moveTo(-tw*0.55,fs*0.52);c.lineTo(tw*0.6,fs*0.52);c.stroke();
+  c.beginPath();c.moveTo(-tw*0.5,-fs*0.55);c.lineTo(tw*0.55,-fs*0.55);c.stroke();
+  c.restore();
+}
+
+function drawCrown(c,x,y,size,col){
+  c.save();c.translate(x,y);
+  c.fillStyle=col;c.strokeStyle='rgba(0,0,0,0.8)';c.lineWidth=2;c.lineJoin='round';
+  c.beginPath();
+  c.moveTo(-size,size*0.4);
+  c.lineTo(-size,-size*0.1);
+  c.lineTo(-size*0.55,size*0.3);
+  c.lineTo(-size*0.3,-size*0.55);
+  c.lineTo(0,size*0.2);
+  c.lineTo(size*0.3,-size*0.55);
+  c.lineTo(size*0.55,size*0.3);
+  c.lineTo(size,-size*0.1);
+  c.lineTo(size,size*0.4);
+  c.closePath();
+  c.stroke();c.fill();
+  // Crown gems
+  [[-size*0.55,0],[0,-size*0.15],[size*0.55,0]].forEach(function(g){
+    c.beginPath();c.arc(g[0],g[1],size*0.1,0,6.28);
+    c.fillStyle='rgba(255,255,255,0.7)';c.fill();
+  });
+  c.restore();
+}
+
+function drawSprayCanChar(c,x,y,size,col){
+  // Simple graffiti character face — round head, big eyes, cap
+  c.save();c.translate(x,y);
+  // Body
+  c.fillStyle=col;c.strokeStyle='rgba(0,0,0,0.7)';c.lineWidth=2;
+  c.beginPath();c.ellipse(0,size*0.6,size*0.4,size*0.55,0,0,Math.PI*2);c.fill();c.stroke();
+  // Head
+  c.fillStyle='#f5d5a0';c.beginPath();c.arc(0,0,size*0.38,0,Math.PI*2);c.fill();c.stroke();
+  // Eyes
+  c.fillStyle='#fff';c.beginPath();c.ellipse(-size*0.13,0,size*0.1,size*0.13,0,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(size*0.13,0,size*0.1,size*0.13,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#111';c.beginPath();c.arc(-size*0.13,0,size*0.06,0,Math.PI*2);c.fill();
+  c.beginPath();c.arc(size*0.13,0,size*0.06,0,Math.PI*2);c.fill();
+  // Mouth grin
+  c.strokeStyle='#333';c.lineWidth=2;c.beginPath();
+  c.arc(0,size*0.1,size*0.14,0.2,Math.PI-0.2);c.stroke();
+  // Cap
+  c.fillStyle='#222';c.beginPath();
+  c.moveTo(-size*0.38,-size*0.25);c.lineTo(size*0.38,-size*0.25);
+  c.lineTo(size*0.3,-size*0.42);c.lineTo(-size*0.3,-size*0.42);c.closePath();c.fill();
+  c.fillRect(-size*0.45,-size*0.28,size*0.9,size*0.06); // brim
+  c.restore();
+}
+
+function drawBrickMortar(ctx,W,H){
+  var bH=28,bW=58;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(160,150,140,0.45)';
+  ctx.lineWidth=2;
+  for(var row=0;row<=Math.ceil(H/bH)+1;row++){
+    var off=(row%2===0)?0:bW/2;
+    ctx.beginPath();ctx.moveTo(0,row*bH);ctx.lineTo(W,row*bH);ctx.stroke();
+    for(var col=-1;col<=Math.ceil(W/bW)+2;col++){
+      var lx=col*bW+off;
+      ctx.beginPath();ctx.moveTo(lx,row*bH);ctx.lineTo(lx,(row+1)*bH);ctx.stroke();
+    }
+  }
+}
+
 function initGraffiti(){
   var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
-  c.fillStyle='#2a1a10';c.fillRect(0,0,W,H);
-  c.strokeStyle='rgba(0,0,0,0.45)';c.lineWidth=2;
   var bH=28,bW=58;
+  // Brick faces
   for(var row=0;row<=Math.ceil(H/bH)+1;row++){
     var off=(row%2===0)?0:bW/2;
     c.fillStyle=row%3===0?'#2e1c11':'#341f12';
     for(var col=-1;col<=Math.ceil(W/bW)+1;col++){
-      var bx=col*bW+off,by=row*bH;c.fillRect(bx,by,bW-3,bH-3);c.strokeRect(bx,by,bW-3,bH-3);
+      c.fillRect(col*bW+off,row*bH,bW-2,bH-2);
     }
   }
-  var tags=[{x:W*.12,y:H*.28,r:-.2,s:1.1},{x:W*.42,y:H*.2,r:.1,s:1.4},{x:W*.74,y:H*.32,r:-.1,s:1.0},{x:W*.22,y:H*.64,r:.15,s:1.2},{x:W*.6,y:H*.7,r:-.05,s:.9},{x:W*.85,y:H*.55,r:.2,s:1.0}];
-  tags.forEach(function(t,i){
-    c.save();c.translate(t.x,t.y);c.rotate(t.r);c.scale(t.s,t.s);
-    var col=GRAFFITI_COLORS[i%6],word=GRAFFITI_WORDS[i%8],fs=32+Math.sin(i)*12;
-    c.font='bold '+fs+'px Arial,sans-serif';c.shadowBlur=18;c.shadowColor=col;
-    c.strokeStyle='rgba(0,0,0,0.8)';c.lineWidth=5;c.strokeText(word,0,0);
-    c.fillStyle=col;c.fillText(word,0,0);
-    var w2=GRAFFITI_WORDS[(i+3)%8];c.font='bold '+(fs*.7)+'px Arial,sans-serif';
-    c.strokeText(w2,fs*.2,fs*.9);c.fillText(w2,fs*.2,fs*.9);c.shadowBlur=0;c.restore();
+
+  var S=Math.min(W,H*1.6); // scale factor
+
+  // ── PIECE 1: Wildstyle "NEON" spanning top — biggest tag ──
+  c.save();c.translate(W*0.5,H*0.17);
+  sprayCircle(c,-S*.15,0,S*.12,'#ff0000',160);
+  sprayCircle(c,S*.15,0,S*.1,'#ff8800',120);
+  drawWildStyle(c,'NEON',0,0,S*.1,'#ff2d78','#fff01f');
+  drawDrip(c,-S*.06,S*.055,S*.06,'rgba(255,45,120,0.8)');
+  drawDrip(c,S*.02,S*.055,S*.04,'rgba(255,45,120,0.6)');
+  drawDrip(c,S*.07,S*.055,S*.08,'rgba(255,45,120,0.7)');
+  drawCrown(c,0,-S*.09,S*.04,'#fff01f');
+  c.restore();
+
+  // ── PIECE 2: Throwup "WUZ" left mid ──
+  c.save();c.translate(W*0.17,H*0.48);c.rotate(-0.1);
+  sprayCircle(c,0,0,S*.09,'#39ff14',140);
+  drawThrowup(c,'WUZ',0,0,S*.085,'rgba(57,255,20,0.25)','#39ff14');
+  drawDrip(c,-S*.02,S*.05,S*.07,'rgba(57,255,20,0.7)');
+  drawDrip(c,S*.03,S*.05,S*.05,'rgba(57,255,20,0.5)');
+  c.restore();
+
+  // ── PIECE 3: Wildstyle "RAGE" right mid ──
+  c.save();c.translate(W*0.78,H*0.45);c.rotate(0.08);
+  sprayCircle(c,0,0,S*.1,'#bf5fff',160);
+  drawWildStyle(c,'RAGE',0,0,S*.082,'#bf5fff','#00f5ff');
+  drawDrip(c,S*.02,S*.05,S*.09,'rgba(191,95,255,0.75)');
+  c.restore();
+
+  // ── PIECE 4: Throwup "ZONE" centre ──
+  c.save();c.translate(W*0.5,H*0.54);c.rotate(-0.04);
+  sprayCircle(c,0,0,S*.11,'#00f5ff',180);
+  drawThrowup(c,'ZONE',0,0,S*.095,'rgba(0,245,255,0.2)','#00f5ff');
+  [-S*.045,-S*.01,S*.03,S*.06].forEach(function(dx){
+    drawDrip(c,dx,S*.055,S*.04+Math.random()*S*.05,'rgba(0,245,255,'+(0.4+Math.random()*0.35)+')');
   });
-  c.save();c.translate(W*.5,H*.5);c.fillStyle='#ff2d78';c.shadowBlur=20;c.shadowColor='#ff2d78';
-  c.font='bold 40px Arial';c.textAlign='center';c.fillText('→ CREW WUZ HERE ←',0,0);c.shadowBlur=0;c.restore();
+  c.restore();
+
+  // ── PIECE 5: Spray-can character bottom-left ──
+  c.save();c.translate(W*0.12,H*0.77);
+  drawSprayCanChar(c,0,0,S*.06,'#ff6b1a');
+  c.restore();
+
+  // ── PIECE 6: "SQUAD" wildstyle bottom spanning ──
+  c.save();c.translate(W*0.5,H*0.87);c.rotate(0.03);
+  sprayCircle(c,0,0,S*.18,'#ff6b1a',250);
+  sprayCircle(c,0,0,S*.12,'#fff01f',150);
+  drawWildStyle(c,'SQUAD',0,0,S*.09,'#ff6b1a','#fff01f');
+  [-S*.08,-S*.03,S*.02,S*.07,S*.11].forEach(function(dx){
+    drawDrip(c,dx,S*.05,S*.03+Math.random()*S*.06,'rgba(255,107,26,'+(0.5+Math.random()*0.4)+')');
+  });
+  c.restore();
+
+  // ── PIECE 7: "HERE" scrawl tag top-right corner ──
+  c.save();c.translate(W*0.86,H*0.28);c.rotate(0.2);
+  c.font='bold '+S*.04+'px Arial,sans-serif';
+  c.textAlign='center';c.textBaseline='middle';
+  c.strokeStyle='rgba(0,0,0,0.7)';c.lineWidth=4;c.strokeText('HERE',0,0);
+  c.fillStyle='#fff01f';c.fillText('HERE',0,0);
+  drawDrip(c,S*.015,S*.025,S*.035,'rgba(255,240,31,0.7)');
+  c.restore();
+
+  // Mortar grid always on top
+  var mc=document.getElementById('mgMortarCanvas');
+  if(mc)drawBrickMortar(mc.getContext('2d'),W,H);
+
   MG.state.paintCfg={col:'rgba(245,240,230,1)',w:44};
   MG.state.coverTarget={r:200,g:200,b:200};
 }
@@ -1700,118 +1899,651 @@ function mgPickUp(x,y){
 ══════════════════════════════════════════ */
 function initParking(){
   var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
-  // Asphalt
-  c.fillStyle='#1c1c1c';c.fillRect(0,0,W,H);
-  // Faded ghost lines to paint over
-  var lineW=3.5,spaceW=Math.min(W/6,70),spaceH=Math.min(H/4,90),cols=5,rows=3;
-  var startX=(W-cols*spaceW)/2,startY=H*.15;
-  MG.state.lines=[];
-  for(var row=0;row<rows;row++){
-    for(var col=0;col<=cols;col++){
-      var lx=startX+col*spaceW,ly=startY+row*spaceH;
-      // Draw faded ghost
-      c.strokeStyle='rgba(180,180,180,0.18)';c.lineWidth=lineW+2;
-      c.beginPath();c.moveTo(lx,ly);c.lineTo(lx,ly+spaceH*.88);c.stroke();
-      MG.state.lines.push({x1:lx,y1:ly,x2:lx,y2:ly+spaceH*.88,painted:false});
+
+  // ── Layout: top-down aerial, zoomed in (20% more than reference) ──
+  // 3 columns of spaces, rows fill screen, drive lanes between columns
+  var cols=3,rows=5;
+  var laneW=W*.12;         // driving lane width
+  var spW=(W-laneW*2)/cols*1.1;  // space width (slightly wider for zoom)
+  var spH=H/rows;          // space height
+
+  // Column x starts (2 lanes at ~33% and ~66%)
+  var col0x=0, col1x=col0x+spW+laneW, col2x=col1x+spW+laneW;
+
+  MG.state.pk={
+    cols:cols,rows:rows,spW:spW,spH:spH,
+    laneW:laneW,col0x:col0x,col1x:col1x,col2x:col2x,
+    cars:[],        // drawn cars (no-paint zones)
+    painted:false,  // using free paint — track via pixel coverage
+    penaltyFlash:0,penalties:0,
+    // Ghost line segments to paint (all the stall lines)
+    ghostLines:[]
+  };
+
+  // Build ghost lines for all 3 columns
+  var pk=MG.state.pk;
+  [col0x,col1x,col2x].forEach(function(cx){
+    // Left edge + right edge of each column + internal row dividers
+    for(var r=0;r<=rows;r++){
+      var y=r*spH;
+      pk.ghostLines.push({x1:cx,y1:y,x2:cx+spW,y2:y}); // horizontal stall line
     }
-  }
-  // Horizontal rows
-  for(var row=0;row<=rows;row++){
-    var ly=startY+row*spaceH;
-    c.strokeStyle='rgba(180,180,180,0.18)';c.lineWidth=lineW;
-    c.beginPath();c.moveTo(startX,ly);c.lineTo(startX+cols*spaceW,ly);c.stroke();
-  }
-  // Some parked cars
-  [[startX+spaceW*.1,startY+spaceH*.1,'#ff2d78'],[startX+spaceW*2.1,startY+spaceH*.1,'#00f5ff'],[startX+spaceW*4.1,startY+spaceH*.1,'#39ff14'],
-   [startX+spaceW*.1,startY+spaceH*1.1,'#bf5fff'],[startX+spaceW*3.1,startY+spaceH*2.1,'#ff6b1a']].forEach(function(car){
-    c.fillStyle=car[2];c.shadowBlur=12;c.shadowColor=car[2];
-    c.fillRect(car[0],car[1],spaceW*.78,spaceH*.7);
-    c.shadowBlur=0;c.fillStyle='rgba(0,0,0,0.4)';c.fillRect(car[0]+4,car[1]+4,spaceW*.78-8,spaceH*.2);
+    // Left and right border verticals
+    pk.ghostLines.push({x1:cx,y1:0,x2:cx,y2:H});
+    pk.ghostLines.push({x1:cx+spW,y1:0,x2:cx+spW,y2:H});
   });
-  MG.state.paintCfg={col:'rgba(255,240,60,1)',w:6};
-  MG.state.coverTarget={r:200,g:180,b:0};
+
+  // Cars — top-down cartoon style, fill most spaces
+  var carCols=['#7a7a8a','#5a6a7a','#c04040','#4a5a6a','#8a6a4a','#3a5a3a',
+               '#7a4a4a','#5a7a8a','#a06040','#4a4a6a','#6a8a5a','#8a8a6a'];
+  var ci=0;
+  [col0x,col1x,col2x].forEach(function(cx){
+    for(var r=0;r<rows;r++){
+      if(Math.random()<0.15)return; // occasional empty space
+      var col=carCols[ci++%carCols.length];
+      pk.cars.push({
+        x:cx+spW*.1, y:r*spH+spH*.08,
+        w:spW*.8,    h:spH*.82,
+        col:col
+      });
+    }
+  });
+
+  drawParking();
+}
+
+function drawTopDownCar(c,x,y,w,h,col){
+  // Proper top-down cartoon car
+  var r=Math.min(w,h)*0.12; // corner radius
+  // Body
+  c.fillStyle=col;
+  c.beginPath();
+  c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);
+  c.closePath();c.fill();
+  // Outline
+  c.strokeStyle='rgba(0,0,0,0.55)';c.lineWidth=1.5;c.stroke();
+
+  // Windshield (top of car = front)
+  c.fillStyle='rgba(160,210,230,0.65)';
+  c.fillRect(x+w*.15,y+h*.08,w*.7,h*.2);
+  c.strokeStyle='rgba(0,0,0,0.3)';c.lineWidth=1;c.strokeRect(x+w*.15,y+h*.08,w*.7,h*.2);
+
+  // Rear window
+  c.fillStyle='rgba(140,190,210,0.5)';
+  c.fillRect(x+w*.15,y+h*.72,w*.7,h*.18);
+  c.strokeRect(x+w*.15,y+h*.72,w*.7,h*.18);
+
+  // Roof panel (darker centre)
+  c.fillStyle='rgba(0,0,0,0.18)';
+  c.fillRect(x+w*.12,y+h*.29,w*.76,h*.42);
+
+  // Roof highlight
+  c.fillStyle='rgba(255,255,255,0.1)';
+  c.fillRect(x+w*.18,y+h*.31,w*.28,h*.12);
+
+  // Wheels — 4 corners
+  var wr=Math.min(w,h)*.1;
+  var wheelPos=[[x+w*.08,y+h*.14],[x+w*.92,y+h*.14],[x+w*.08,y+h*.84],[x+w*.92,y+h*.84]];
+  wheelPos.forEach(function(wp){
+    c.fillStyle='#1a1a1a';c.beginPath();c.arc(wp[0],wp[1],wr,0,6.28);c.fill();
+    c.strokeStyle='#444';c.lineWidth=1;c.stroke();
+    // Hubcap
+    c.fillStyle='#666';c.beginPath();c.arc(wp[0],wp[1],wr*.45,0,6.28);c.fill();
+  });
+}
+
+function drawAsphaltCracks(c,W,H){
+  // Branching cracks across the lot
+  c.strokeStyle='rgba(20,18,14,0.75)';c.lineWidth=2.5;c.lineCap='round';
+  function crack(sx,sy,angle,len,depth){
+    if(depth>4||len<12)return;
+    var ex=sx+Math.cos(angle)*len,ey=sy+Math.sin(angle)*len;
+    c.beginPath();c.moveTo(sx,sy);c.lineTo(ex,ey);c.stroke();
+    c.lineWidth=Math.max(0.5,2.5-depth*0.5);
+    // Branch
+    if(Math.random()<0.6)crack(ex,ey,angle+(Math.random()-0.5)*1.2,len*0.7,depth+1);
+    if(Math.random()<0.3)crack(ex,ey,angle+(Math.random()-0.5)*2,len*0.5,depth+2);
+  }
+  // Several main crack origins
+  [[W*.15,H*.2],[W*.48,H*.05],[W*.42,H*.6],[W*.72,H*.35],[W*.28,H*.78]].forEach(function(p){
+    crack(p[0],p[1],Math.PI/2+Math.random()*0.8-0.4,H*.18,0);
+    crack(p[0],p[1],Math.PI/2+Math.random()*1.2,H*.12,1);
+  });
+  c.lineWidth=1;
+  c.strokeStyle='rgba(20,18,14,0.4)';
+  // Fine surface texture cracks
+  for(var i=0;i<14;i++){
+    crack(Math.random()*W,Math.random()*H,Math.random()*Math.PI*2,H*.06,2);
+  }
+}
+
+function drawParking(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height,pk=MG.state.pk;
+  if(!pk)return;
+
+  // Asphalt base
+  c.fillStyle='#6a6860';c.fillRect(0,0,W,H);
+  // Subtle asphalt grain
+  for(var i=0;i<W*H/400;i++){
+    c.fillStyle='rgba(0,0,0,'+((Math.random()*0.06))+')';
+    c.fillRect(Math.random()*W,Math.random()*H,2,2);
+  }
+
+  // Driving lanes (slightly lighter)
+  var laneXs=[pk.col0x+pk.spW, pk.col1x+pk.spW];
+  laneXs.forEach(function(lx){
+    c.fillStyle='rgba(120,115,108,0.4)';
+    c.fillRect(lx,0,pk.laneW,H);
+  });
+
+  // Asphalt cracks
+  drawAsphaltCracks(c,W,H);
+
+  // Ghost stall lines (faded white, barely visible)
+  pk.ghostLines.forEach(function(gl){
+    c.strokeStyle='rgba(200,195,185,0.15)';c.lineWidth=3;
+    c.beginPath();c.moveTo(gl.x1,gl.y1);c.lineTo(gl.x2,gl.y2);c.stroke();
+  });
+
+  // Cars
+  pk.cars.forEach(function(car){
+    drawTopDownCar(c,car.x,car.y,car.w,car.h,car.col);
+  });
+
+  // Line painting machine (top-right corner of lot)
+  var mx=W*.78,my=H*.08;
+  // Machine body
+  c.fillStyle='#e8820a';c.fillRect(mx,my,28,38);
+  c.strokeStyle='#a05000';c.lineWidth=2;c.strokeRect(mx,my,28,38);
+  c.fillStyle='#cc6600';c.fillRect(mx+4,my+4,20,12);
+  // Paint tank
+  c.fillStyle='#ddd';c.beginPath();c.arc(mx+14,my+26,8,0,6.28);c.fill();c.strokeStyle='#aaa';c.stroke();
+  // Wheels
+  c.fillStyle='#222';
+  c.beginPath();c.arc(mx+6,my+38,5,0,6.28);c.fill();
+  c.beginPath();c.arc(mx+22,my+38,5,0,6.28);c.fill();
+  // Handle
+  c.strokeStyle='#888';c.lineWidth=3;
+  c.beginPath();c.moveTo(mx+6,my);c.lineTo(mx+4,my-18);c.stroke();
+  c.beginPath();c.moveTo(mx+22,my);c.lineTo(mx+24,my-18);c.stroke();
+  c.beginPath();c.moveTo(mx+4,my-18);c.lineTo(mx+24,my-18);c.stroke();
+  // Paint supply cans nearby
+  [[mx+34,my+4,'#ffdd00'],[mx+34,my+20,'#ffdd00'],[mx+48,my+4,'#ffdd00']].forEach(function(k){
+    c.fillStyle=k[2];c.beginPath();c.arc(k[0],k[1],7,0,6.28);c.fill();
+    c.strokeStyle='#aa8800';c.lineWidth=1.5;c.stroke();
+  });
+
+  // Penalty flash
+  if(pk.penaltyFlash>0){
+    pk.penaltyFlash--;
+    c.fillStyle='rgba(255,45,120,0.2)';c.fillRect(0,0,W,H);
+    c.fillStyle='#ff2d78';c.font='bold 13px Orbitron,sans-serif';c.textAlign='center';
+    c.shadowBlur=16;c.shadowColor='#ff2d78';
+    c.fillText('⚠️ DON\'T PAINT THE CARS!',W/2,H/2);
+    c.shadowBlur=0;
+  }
+
+  // Instruction bar
+  c.fillStyle='rgba(0,0,0,0.5)';c.fillRect(0,H*.96,W,H*.04);
+  c.fillStyle='rgba(255,240,60,0.85)';c.font='9px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('PAINT THE STALL LINES — FREE DRAW — AVOID CARS 🎨',W/2,H*.984);
+}
+
+function mgPaintDown(x,y){
+  MG.state.painting=true;MG.state.lx=x;MG.state.ly=y;
+  if(MG.id==='parking'){parkingFreeStroke(x,y,x,y);}
+  else if(MG.id==='pressure'){mgPressureStroke(x,y,x,y);}
+  else{mgPaintStroke(x,y,x,y);}
+}
+function mgPaintMove(x,y){
+  if(!MG.state.painting)return;
+  if(MG.id==='parking'){parkingFreeStroke(MG.state.lx,MG.state.ly,x,y);}
+  else if(MG.id==='pressure'){mgPressureStroke(MG.state.lx,MG.state.ly,x,y);}
+  else{mgPaintStroke(MG.state.lx,MG.state.ly,x,y);}
+  MG.state.lx=x;MG.state.ly=y;
+}
+function mgPaintUp(){MG.state.painting=false;}
+
+function parkingFreeStroke(x1,y1,x2,y2){
+  var pk=MG.state.pk;if(!pk)return;
+  var c=MG.ctx;
+
+  // Check car collision
+  var hitCar=false;
+  pk.cars.forEach(function(car){
+    if(x2>car.x&&x2<car.x+car.w&&y2>car.y&&y2<car.y+car.h)hitCar=true;
+  });
+  if(hitCar){pk.penaltyFlash=30;pk.penalties++;drawParking();return;}
+
+  // Free yellow paint stroke
+  c.strokeStyle='rgba(255,235,40,0.95)';
+  c.lineWidth=5;c.lineCap='round';c.lineJoin='round';
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+
+  // Redraw cars and machine on top so paint doesn't cover them
+  pk.cars.forEach(function(car){drawTopDownCar(c,car.x,car.y,car.w,car.h,car.col);});
+
+  // Sample yellow coverage for progress (every 8 strokes)
+  MG.timer++;
+  if(MG.timer%8===0){
+    var imgd=c.getImageData(0,0,MG.canvas.width,MG.canvas.height).data;
+    var step=12,yellow=0,total=0;
+    for(var py=0;py<MG.canvas.height;py+=step){
+      for(var px=0;px<MG.canvas.width;px+=step){
+        var idx=(py*MG.canvas.width+px)*4;
+        // Yellow = high R, high G, low B
+        if(imgd[idx]>180&&imgd[idx+1]>180&&imgd[idx+2]<80)yellow++;
+        total++;
+      }
+    }
+    setMGProgress(Math.min(100,(yellow/total)*1800)); // scale up — lot is mostly asphalt
+  }
 }
 
 /* ══════════════════════════════════════════
-   GAME 4 — WINDSHIELD CLEANING (scrub circles)
+   GAME 4 — WINDSHIELD CLEANING
 ══════════════════════════════════════════ */
+var WS={};// windshield game state
 function initWindshield(){
-  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
-  // Gas station background
-  c.fillStyle='#111118';c.fillRect(0,0,W,H);
-  // Ground
-  c.fillStyle='#222228';c.fillRect(0,H*.65,W,H*.35);
-  // Pump
-  c.fillStyle='#1a1a30';c.fillRect(W*.04,H*.3,W*.1,H*.35);
-  c.strokeStyle='#00f5ff';c.lineWidth=2;c.shadowBlur=8;c.shadowColor='#00f5ff';c.strokeRect(W*.04,H*.3,W*.1,H*.35);c.shadowBlur=0;
-  c.fillStyle='#00f5ff';c.font='8px Orbitron,sans-serif';c.textAlign='center';c.fillText('GAS',W*.09,H*.52);
-  // Cars with dirty windshields
-  var cars=[
-    {x:W*.2,y:H*.38,w:W*.22,h:H*.25,col:'#ff2d78',dirty:true},
-    {x:W*.5,y:H*.38,w:W*.22,h:H*.25,col:'#39ff14',dirty:true},
-    {x:W*.75,y:H*.38,w:W*.18,h:H*.22,col:'#bf5fff',dirty:true}
-  ];
-  MG.state.cars=cars;
-  MG.state.scrubbed=[];// array of {cx,cy,r} circles scrubbed
-  MG.state.totalBugs=cars.length*8;
+  var W=MG.canvas.width,H=MG.canvas.height;
+  WS={
+    totalCars:5,
+    carsDone:0,
+    currentCar:0,
+    scrubbing:false,
+    driving:false,   // animation: car driving away
+    driveX:0,        // x offset during drive-away
+    driveTimer:0,
+    carCols:['#c8521a','#3a5a8a','#2a7a3a','#8a3a3a','#6a4a8a'],
+    carNames:['PICKUP','SEDAN','HATCHBACK','SUV','VAN'],
+    bugSeeds:[]      // deterministic bug positions per car
+  };
+  // Pre-generate bug positions for each car
+  for(var c2=0;c2<WS.totalCars;c2++){
+    var bugs=[];
+    for(var b=0;b<14;b++){
+      // Pseudo-random but deterministic per car
+      var t=Math.sin(c2*99+b*37)*43758.5453;
+      var t2=Math.sin(c2*77+b*19)*12345.678;
+      bugs.push({
+        fx:(t-Math.floor(t)),
+        fy:(t2-Math.floor(t2)),
+        type:b%5 // 0=splat 1=beetle 2=fly 3=mosquito 4=blob
+      });
+    }
+    WS.bugSeeds.push(bugs);
+  }
+  MG.state.ws=WS;
+  MG.state.scrubbed=[];
   drawWindshield();
 }
+
+function drawRoadScene(c,W,H){
+  // Sky
+  var sky=c.createLinearGradient(0,0,0,H*.45);
+  sky.addColorStop(0,'#6bb8d4');sky.addColorStop(1,'#a8d8ea');
+  c.fillStyle=sky;c.fillRect(0,0,W,H*.45);
+
+  // Clouds
+  function cloud(cx,cy,s){
+    c.fillStyle='rgba(255,255,255,0.9)';
+    [[0,0,s],[s*.7,-s*.3,s*.65],[s*1.3,0,s*.75],[-s*.4,-s*.2,s*.55]].forEach(function(p){
+      c.beginPath();c.arc(cx+p[0],cy+p[1],p[2],0,6.28);c.fill();
+    });
+  }
+  cloud(W*.08,H*.06,H*.04);cloud(W*.45,H*.04,H*.035);cloud(W*.78,H*.08,H*.032);
+
+  // Trees/palms left side
+  function palm(px,py,h){
+    c.strokeStyle='#7a5530';c.lineWidth=6;c.lineCap='round';
+    c.beginPath();c.moveTo(px,py);c.quadraticCurveTo(px-10,py-h*.5,px+5,py-h);c.stroke();
+    // Fronds
+    c.strokeStyle='#3a8a2a';c.lineWidth=4;
+    for(var i=0;i<6;i++){
+      var a=(-0.6+i*0.22),fr=h*.5;
+      c.beginPath();c.moveTo(px+5,py-h);
+      c.quadraticCurveTo(px+5+Math.cos(a)*fr*.5,py-h+Math.sin(a)*fr*.3,
+                          px+5+Math.cos(a)*fr,py-h+Math.sin(a)*fr);c.stroke();
+    }
+  }
+  palm(W*.05,H*.42,H*.22);palm(W*.12,H*.4,H*.18);
+  palm(W*.88,H*.41,H*.2);palm(W*.94,H*.39,H*.17);
+
+  // Orange trees left
+  c.fillStyle='#2a6a1a';
+  [W*.03,W*.08,W*.14].forEach(function(tx){
+    c.beginPath();c.arc(tx,H*.38,H*.06,0,6.28);c.fill();
+    // Oranges
+    c.fillStyle='#e87020';
+    for(var oi=0;oi<4;oi++){c.beginPath();c.arc(tx+(Math.sin(oi*1.5))*H*.04,H*.38+(Math.cos(oi*1.5))*H*.035,H*.012,0,6.28);c.fill();}
+    c.fillStyle='#2a6a1a';
+  });
+
+  // Road
+  var roadY=H*.42;
+  c.fillStyle='#5a5850';c.fillRect(0,roadY,W,H-roadY);
+  // Road gradient (perspective)
+  var rdg=c.createLinearGradient(0,roadY,0,H);
+  rdg.addColorStop(0,'#4a4840');rdg.addColorStop(1,'#5a5850');
+  c.fillStyle=rdg;c.fillRect(0,roadY,W,H-roadY);
+  // Lane markings
+  c.strokeStyle='rgba(255,255,255,0.6)';c.lineWidth=3;c.setLineDash([W*.04,W*.04]);
+  c.beginPath();c.moveTo(W*.5,roadY+5);c.lineTo(W*.5,H);c.stroke();
+  c.setLineDash([]);
+  // Road shoulders
+  c.fillStyle='#7a8060';c.fillRect(0,roadY,W*.08,H-roadY);c.fillRect(W*.92,roadY,W*.08,H-roadY);
+
+  // Road sign right side
+  var signX=W*.75,signY=H*.18;
+  c.strokeStyle='#888';c.lineWidth=4;
+  c.beginPath();c.moveTo(signX,signY+H*.22);c.lineTo(signX,signY+H*.14);c.stroke();
+  c.fillStyle='#2a6a3a';c.fillRect(signX-W*.1,signY,W*.18,H*.07);
+  c.strokeStyle='#fff';c.lineWidth=1.5;c.strokeRect(signX-W*.1,signY,W*.18,H*.07);
+  c.fillStyle='#fff';c.font='bold '+Math.floor(H*.018)+'px Arial,sans-serif';
+  c.textAlign='center';c.fillText('GAS STATION',signX-W*.01,signY+H*.028);
+  c.fillText('NEXT RIGHT',signX-W*.01,signY+H*.052);
+
+  // Power lines
+  c.strokeStyle='rgba(40,30,20,0.6)';c.lineWidth=1.5;
+  var poleH=H*.3;
+  [W*.15,W*.5,W*.85].forEach(function(px){
+    c.beginPath();c.moveTo(px,H*.42);c.lineTo(px,H*.42-poleH);c.stroke();
+    c.beginPath();c.moveTo(px-W*.04,H*.42-poleH*.75);c.lineTo(px+W*.04,H*.42-poleH*.75);c.stroke();
+  });
+  // Wires connecting poles
+  c.strokeStyle='rgba(30,20,10,0.4)';c.lineWidth=1;
+  [[W*.15,W*.5],[W*.5,W*.85]].forEach(function(pair){
+    var wy=H*.42-poleH*.75;
+    c.beginPath();c.moveTo(pair[0],wy);
+    c.quadraticCurveTo((pair[0]+pair[1])/2,wy+H*.015,pair[1],wy);c.stroke();
+    c.beginPath();c.moveTo(pair[0],wy+H*.025);
+    c.quadraticCurveTo((pair[0]+pair[1])/2,wy+H*.04,pair[1],wy+H*.025);c.stroke();
+  });
+}
+
+function drawFrontCar(c,W,H,col,driveX){
+  var ox=driveX||0;
+  // Car fills most of screen - front-facing view
+  var carW=W*.82,carH=H*.62;
+  var carX=(W-carW)/2+ox,carY=H*.32;
+
+  // Car body lower half
+  c.fillStyle=col;
+  c.beginPath();
+  c.moveTo(carX+carW*.05,carY+carH*.55);
+  c.lineTo(carX+carW*.95,carY+carH*.55);
+  c.lineTo(carX+carW,carY+carH*.75);
+  c.lineTo(carX+carW,carY+carH);
+  c.lineTo(carX,carY+carH);
+  c.lineTo(carX,carY+carH*.75);
+  c.closePath();c.fill();
+  c.strokeStyle='rgba(0,0,0,0.4)';c.lineWidth=2;c.stroke();
+
+  // Car roof/cabin
+  c.fillStyle=col;
+  c.beginPath();
+  c.moveTo(carX+carW*.12,carY+carH*.55);
+  c.lineTo(carX+carW*.2,carY+carH*.1);
+  c.lineTo(carX+carW*.8,carY+carH*.1);
+  c.lineTo(carX+carW*.88,carY+carH*.55);
+  c.closePath();c.fill();c.stroke();
+
+  // Hood (between cabin and bumper) - flatter
+  c.fillStyle=shadeCol2(col,-20);
+  c.beginPath();
+  c.moveTo(carX+carW*.05,carY+carH*.55);
+  c.lineTo(carX+carW*.12,carY+carH*.55);
+  c.lineTo(carX+carW*.88,carY+carH*.55);
+  c.lineTo(carX+carW*.95,carY+carH*.55);
+  c.lineTo(carX+carW,carY+carH*.72);
+  c.lineTo(carX,carY+carH*.72);
+  c.closePath();c.fill();c.stroke();
+
+  // Windshield - the main scrub zone
+  var wsX=carX+carW*.18,wsY=carY+carH*.12,wsW=carW*.64,wsH=carH*.4;
+  MG.state.wsZone={x:wsX,y:wsY,w:wsW,h:wsH};
+
+  // Windshield glass (clean parts)
+  c.fillStyle='rgba(140,200,230,0.55)';
+  c.beginPath();
+  c.moveTo(wsX,wsY+wsH);c.lineTo(wsX+wsW*.05,wsY);
+  c.lineTo(wsX+wsW*.95,wsY);c.lineTo(wsX+wsW,wsY+wsH);
+  c.closePath();c.fill();
+  c.strokeStyle='rgba(180,220,240,0.6)';c.lineWidth=2;c.stroke();
+
+  // Windshield frame
+  c.strokeStyle='rgba(30,30,30,0.8)';c.lineWidth=6;
+  c.beginPath();
+  c.moveTo(wsX,wsY+wsH);c.lineTo(wsX+wsW*.05,wsY);
+  c.lineTo(wsX+wsW*.95,wsY);c.lineTo(wsX+wsW,wsY+wsH);
+  c.closePath();c.stroke();
+
+  // Wipers
+  c.strokeStyle='rgba(40,40,40,0.7)';c.lineWidth=3;c.lineCap='round';
+  c.beginPath();c.moveTo(wsX+wsW*.1,wsY+wsH*.92);c.lineTo(wsX+wsW*.45,wsY+wsH*.15);c.stroke();
+  c.beginPath();c.moveTo(wsX+wsW*.9,wsY+wsH*.92);c.lineTo(wsX+wsW*.55,wsY+wsH*.15);c.stroke();
+
+  // Interior visible through windshield
+  c.save();c.beginPath();
+  c.moveTo(wsX+2,wsY+wsH-2);c.lineTo(wsX+wsW*.06,wsY+2);
+  c.lineTo(wsX+wsW*.94,wsY+2);c.lineTo(wsX+wsW-2,wsY+wsH-2);c.closePath();c.clip();
+  // Dashboard
+  c.fillStyle='rgba(40,35,30,0.7)';c.fillRect(wsX,wsY+wsH*.7,wsW,wsH*.35);
+  // Steering wheel
+  c.strokeStyle='rgba(60,50,40,0.85)';c.lineWidth=5;
+  c.beginPath();c.arc(wsX+wsW*.62,wsY+wsH*.82,wsH*.14,0,6.28);c.stroke();
+  c.strokeStyle='rgba(60,50,40,0.6)';c.lineWidth=3;
+  c.beginPath();c.moveTo(wsX+wsW*.62,wsY+wsH*.68);c.lineTo(wsX+wsW*.62,wsY+wsH*.96);c.stroke();
+  c.beginPath();c.moveTo(wsX+wsW*.48,wsY+wsH*.82);c.lineTo(wsX+wsW*.76,wsY+wsH*.82);c.stroke();
+  // Driver silhouette
+  c.fillStyle='rgba(60,45,35,0.75)';
+  c.beginPath();c.arc(wsX+wsW*.62,wsY+wsH*.6,wsH*.12,0,6.28);c.fill();
+  c.beginPath();c.moveTo(wsX+wsW*.5,wsY+wsH*.72);c.lineTo(wsX+wsW*.74,wsY+wsH*.72);c.lineTo(wsX+wsW*.72,wsY+wsH);c.lineTo(wsX+wsW*.52,wsY+wsH);c.closePath();c.fill();
+  // Air freshener
+  c.strokeStyle='rgba(100,80,200,0.8)';c.lineWidth=1.5;
+  c.beginPath();c.moveTo(wsX+wsW*.38,wsY+wsH*.15);c.lineTo(wsX+wsW*.38,wsY+wsH*.42);c.stroke();
+  c.fillStyle='rgba(80,60,180,0.8)';
+  c.beginPath();c.moveTo(wsX+wsW*.38,wsY+wsH*.15);
+  c.lineTo(wsX+wsW*.34,wsY+wsH*.28);c.lineTo(wsX+wsW*.42,wsY+wsH*.28);c.closePath();c.fill();
+  c.restore();
+
+  // Headlights
+  function headlight(hx,hy,hw,hh){
+    c.fillStyle='#e8dfa0';c.beginPath();
+    c.ellipse(hx,hy,hw,hh,0,0,6.28);c.fill();
+    c.strokeStyle='rgba(180,160,80,0.8)';c.lineWidth=2;c.stroke();
+    // Inner ring
+    c.fillStyle='rgba(255,250,200,0.6)';c.beginPath();c.ellipse(hx,hy,hw*.6,hh*.6,0,0,6.28);c.fill();
+  }
+  headlight(carX+carW*.18,carY+carH*.8,carW*.1,carH*.07);
+  headlight(carX+carW*.82,carY+carH*.8,carW*.1,carH*.07);
+
+  // Grille
+  c.fillStyle='#222';c.fillRect(carX+carW*.3,carY+carH*.82,carW*.4,carH*.1);
+  c.strokeStyle='#444';c.lineWidth=1.5;
+  for(var gi=0;gi<5;gi++){
+    c.beginPath();c.moveTo(carX+carW*.3+gi*(carW*.4/5),carY+carH*.82);
+    c.lineTo(carX+carW*.3+gi*(carW*.4/5),carY+carH*.92);c.stroke();
+  }
+  // Logo circle
+  c.fillStyle='#888';c.beginPath();c.arc(carX+carW*.5,carY+carH*.87,carW*.025,0,6.28);c.fill();
+  c.strokeStyle='#bbb';c.lineWidth=1.5;c.stroke();
+
+  // Side mirrors
+  c.fillStyle=shadeCol2(col,-30);
+  c.fillRect(carX-carW*.04,carY+carH*.28,carW*.05,carH*.06);
+  c.fillRect(carX+carW*.99,carY+carH*.28,carW*.05,carH*.06);
+
+  // "CLEAN ME" sign on windshield (when dirty)
+  if(WS.carsDone<WS.totalCars&&!WS.driving){
+    c.fillStyle='rgba(240,235,210,0.88)';
+    var smW=wsW*.32,smH=wsH*.1;
+    c.fillRect(wsX+wsW*.34,wsY+wsH*.06,smW,smH);
+    c.strokeStyle='rgba(80,70,50,0.6)';c.lineWidth=1;c.strokeRect(wsX+wsW*.34,wsY+wsH*.06,smW,smH);
+    c.fillStyle='rgba(60,50,30,0.9)';c.font='bold '+Math.floor(smH*.65)+'px Arial,sans-serif';
+    c.textAlign='center';c.fillText('CLEAN ME',wsX+wsW*.5,wsY+wsH*.06+smH*.72);
+  }
+}
+
+function shadeCol2(hex,amt){
+  try{
+    var r=Math.max(0,Math.min(255,parseInt(hex.substr(1,2),16)+amt));
+    var g=Math.max(0,Math.min(255,parseInt(hex.substr(3,2),16)+amt));
+    var b=Math.max(0,Math.min(255,parseInt(hex.substr(5,2),16)+amt));
+    return 'rgb('+r+','+g+','+b+')';
+  }catch(e){return hex;}
+}
+
+function drawBugSplat(c,x,y,type,size){
+  c.save();c.translate(x,y);
+  if(type===0){// green splat
+    c.fillStyle='rgba(80,160,20,0.85)';
+    c.beginPath();c.arc(0,0,size,0,6.28);c.fill();
+    c.fillStyle='rgba(100,180,30,0.6)';
+    for(var i=0;i<5;i++){var a=i*1.26;c.beginPath();c.ellipse(Math.cos(a)*size*.8,Math.sin(a)*size*.8,size*.5,size*.25,a,0,6.28);c.fill();}
+  }else if(type===1){// dark beetle
+    c.fillStyle='rgba(30,20,10,0.9)';
+    c.beginPath();c.ellipse(0,0,size*.8,size,0,0,6.28);c.fill();
+    c.fillStyle='rgba(60,40,20,0.7)';
+    c.beginPath();c.ellipse(0,-size*.3,size*.5,size*.3,0,0,6.28);c.fill();
+    // Legs
+    c.strokeStyle='rgba(20,15,5,0.8)';c.lineWidth=1;
+    [-0.8,-0.3,0.3,0.8].forEach(function(lx){
+      c.beginPath();c.moveTo(lx*size,0);c.lineTo(lx*size*2.2,size*.6);c.stroke();
+      c.beginPath();c.moveTo(lx*size,0);c.lineTo(lx*size*2.2,-size*.6);c.stroke();
+    });
+  }else if(type===2){// fly splat
+    c.fillStyle='rgba(40,35,20,0.85)';
+    c.beginPath();c.ellipse(0,0,size*.6,size*.8,0,0,6.28);c.fill();
+    c.fillStyle='rgba(180,200,220,0.4)';
+    c.beginPath();c.ellipse(-size*.8,0,size*.7,size*.3,-0.3,0,6.28);c.fill();
+    c.beginPath();c.ellipse(size*.8,0,size*.7,size*.3,0.3,0,6.28);c.fill();
+  }else if(type===3){// yellow blob
+    c.fillStyle='rgba(200,180,20,0.8)';
+    c.beginPath();c.arc(0,0,size*.7,0,6.28);c.fill();
+    c.fillStyle='rgba(220,200,40,0.5)';
+    for(var j=0;j<4;j++){var a2=j*1.57+0.4;c.beginPath();c.arc(Math.cos(a2)*size*.6,Math.sin(a2)*size*.6,size*.35,0,6.28);c.fill();}
+  }else{// brown mud
+    c.fillStyle='rgba(100,70,30,0.75)';
+    c.beginPath();c.arc(0,0,size,0,6.28);c.fill();
+    for(var k=0;k<3;k++){var a3=k*2.1;c.beginPath();c.arc(Math.cos(a3)*size*.7,Math.sin(a3)*size*.7,size*.4,0,6.28);c.fill();}
+  }
+  c.restore();
+}
+
 function drawWindshield(){
   var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
-  c.fillStyle='#111118';c.fillRect(0,0,W,H);
-  c.fillStyle='#222228';c.fillRect(0,H*.65,W,H*.35);
-  c.fillStyle='#1a1a30';c.fillRect(W*.04,H*.3,W*.1,H*.35);
-  c.strokeStyle='#00f5ff';c.lineWidth=2;c.shadowBlur=6;c.shadowColor='#00f5ff';c.strokeRect(W*.04,H*.3,W*.1,H*.35);c.shadowBlur=0;
-  c.fillStyle='#00f5ff';c.font='8px Orbitron,sans-serif';c.textAlign='center';c.fillText('GAS',W*.09,H*.52);
-  MG.state.cars.forEach(function(car){
-    // Car body
-    c.fillStyle=car.col;c.shadowBlur=14;c.shadowColor=car.col;c.fillRect(car.x,car.y,car.w,car.h);c.shadowBlur=0;
-    // Wheels
-    [[car.x+car.w*.15,car.y+car.h],[car.x+car.w*.75,car.y+car.h]].forEach(function(w){c.beginPath();c.arc(w[0],w[1],car.h*.22,0,6.28);c.fillStyle='#111';c.fill();});
-    // Windshield area
-    var wx=car.x+car.w*.1,wy=car.y+car.h*.08,ww=car.w*.8,wh=car.h*.45;
-    c.fillStyle='rgba(150,200,255,0.15)';c.fillRect(wx,wy,ww,wh);
-    c.strokeStyle='rgba(150,200,255,0.4)';c.lineWidth=1.5;c.strokeRect(wx,wy,ww,wh);
-    // Bugs
-    if(car.dirty){
-      for(var i=0;i<8;i++){
-        var bx=wx+15+((i*47)%Math.max(1,ww-30)),by=wy+8+((i*23)%Math.max(1,wh-16));
-        c.font='11px sans-serif';c.textAlign='center';c.fillText('🐛',bx,by+8);
-      }
-    }
-    // Scrub clean zones
-    c.save();c.beginPath();c.rect(wx,wy,ww,wh);c.clip();
-    MG.state.scrubbed.forEach(function(s){
-      if(s.car===car){c.beginPath();c.arc(s.x,s.y,s.r,0,6.28);c.fillStyle='rgba(200,230,255,0.85)';c.fill();}
+  var ci=WS.currentCar;
+  var col=WS.carCols[ci%WS.carCols.length];
+  var driveX=WS.driving?WS.driveX:0;
+
+  // Road scene background
+  drawRoadScene(c,W,H);
+
+  // Car (front facing, with current drive-away offset)
+  drawFrontCar(c,W,H,col,driveX);
+
+  // Bugs on windshield
+  if(!WS.driving&&MG.state.wsZone){
+    var zn=MG.state.wsZone;
+    var bugs=WS.bugSeeds[ci]||[];
+    bugs.forEach(function(bug){
+      var bx=zn.x+bug.fx*(zn.w-20)+10;
+      var by=zn.y+bug.fy*(zn.h-20)+10;
+      drawBugSplat(c,bx,by,bug.type,8+bug.fx*6);
+    });
+
+    // Scrub circles (reveal clean glass)
+    c.save();
+    c.beginPath();
+    c.moveTo(zn.x+zn.w*.05,zn.y);c.lineTo(zn.x+zn.w*.95,zn.y);
+    c.lineTo(zn.x+zn.w,zn.y+zn.h);c.lineTo(zn.x,zn.y+zn.h);c.closePath();
+    c.clip();
+    (MG.state.scrubbed||[]).forEach(function(s){
+      // Water smear effect
+      var grd=c.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r);
+      grd.addColorStop(0,'rgba(180,220,240,0.7)');
+      grd.addColorStop(0.6,'rgba(160,210,235,0.4)');
+      grd.addColorStop(1,'rgba(140,200,230,0)');
+      c.fillStyle=grd;c.beginPath();c.arc(s.x,s.y,s.r,0,6.28);c.fill();
     });
     c.restore();
-  });
-  // Hint
-  c.fillStyle='rgba(0,245,255,0.5)';c.font='9px Orbitron,sans-serif';c.textAlign='center';
-  c.fillText('SCRUB THE WINDSHIELDS — RUB FINGER BACK & FORTH',W/2,H*.9);
+  }
+
+  // Cars remaining counter
+  var remaining=WS.totalCars-WS.carsDone;
+  c.fillStyle='rgba(0,0,0,0.5)';c.fillRect(0,0,W,H*.045);
+  c.fillStyle='rgba(255,240,60,0.9)';c.font='bold '+Math.floor(H*.028)+'px Orbitron,sans-serif';
+  c.textAlign='center';c.fillText('CARS LEFT: '+remaining+'   SCRUBBED: '+WS.carsDone+'/'+WS.totalCars,W/2,H*.034);
+
+  // Drive-away message
+  if(WS.driving){
+    c.fillStyle='rgba(57,255,20,0.85)';c.font='bold '+Math.floor(H*.035)+'px Orbitron,sans-serif';
+    c.textAlign='center';c.shadowBlur=15;c.shadowColor='#39ff14';
+    c.fillText('✓ CLEAN! DRIVING AWAY!',W/2,H*.55);c.shadowBlur=0;
+  }
+
+  // Instruction
+  c.fillStyle='rgba(0,0,0,0.45)';c.fillRect(0,H*.96,W,H*.04);
+  c.fillStyle='rgba(200,235,255,0.85)';c.font='9px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('SCRUB ALL THE BUGS OFF THE WINDSHIELD! 🐛',W/2,H*.984);
 }
-function mgScrubDown(x,y){MG.state.scrubbing=true;mgScrubAt(x,y);}
-function mgScrubMove(x,y){if(!MG.state.scrubbing)return;mgScrubAt(x,y);}
-function mgScrubUp(){MG.state.scrubbing=false;}
+
+function mgScrubDown(x,y){WS.scrubbing=true;mgScrubAt(x,y);}
+function mgScrubMove(x,y){if(!WS.scrubbing)return;mgScrubAt(x,y);}
+function mgScrubUp(){WS.scrubbing=false;}
+
 function mgScrubAt(x,y){
-  MG.state.cars.forEach(function(car){
-    var wx=car.x+car.w*.1,wy=car.y+car.h*.08,ww=car.w*.8,wh=car.h*.45;
-    if(x>wx&&x<wx+ww&&y>wy&&y<wy+wh){
-      MG.state.scrubbed.push({car:car,x:x,y:y,r:22});
-      MG.timer++;
-      if(MG.timer%3===0){
-        var total=0,clean=0;
-        MG.state.cars.forEach(function(car2){
-          var wx2=car2.x+car2.w*.1,ww2=car2.w*.8,wy2=car2.y+car2.h*.08,wh2=car2.h*.45;
-          var area=ww2*wh2;
-          var cov=Math.min(area,MG.state.scrubbed.filter(function(s){return s.car===car2;}).length*22*22*Math.PI);
-          clean+=Math.min(1,cov/area);total++;
-        });
-        setMGProgress((clean/total)*100);
+  if(WS.driving)return;
+  var zn=MG.state.wsZone;if(!zn)return;
+  // Only accept scrubs on the windshield zone
+  if(x<zn.x||x>zn.x+zn.w||y<zn.y||y>zn.y+zn.h)return;
+  MG.state.scrubbed=MG.state.scrubbed||[];
+  MG.state.scrubbed.push({x:x,y:y,r:28});
+  MG.timer++;
+  // Check coverage every 4 scrubs
+  if(MG.timer%4===0){
+    var area=zn.w*zn.h;
+    var covPx=MG.state.scrubbed.length*28*28*Math.PI;
+    var pct=Math.min(100,(covPx/area)*100);
+    // Bugs are considered cleaned at 70% windshield coverage
+    if(pct>=70){
+      wsCarCleaned();return;
+    }
+    // Show partial progress within this car (each car = 100/totalCars %)
+    var carPct=WS.carsDone/WS.totalCars*100;
+    setMGProgress(carPct+(pct/100)*(100/WS.totalCars));
+  }
+  drawWindshield();
+}
+
+function wsCarCleaned(){
+  WS.driving=true;WS.driveX=0;WS.driveTimer=0;
+  MG.state.scrubbed=[];
+  drawWindshield();
+  // Animate car driving to the right
+  function driveAnim(){
+    if(MG.id!=='windshield')return;
+    WS.driveX+=MG.canvas.width*.04;
+    WS.driveTimer++;
+    drawWindshield();
+    if(WS.driveX<MG.canvas.width*1.2){
+      requestAnimationFrame(driveAnim);
+    }else{
+      // Next car
+      WS.carsDone++;
+      WS.driving=false;WS.driveX=0;
+      WS.currentCar=WS.carsDone;
+      setMGProgress((WS.carsDone/WS.totalCars)*100);
+      if(WS.carsDone<WS.totalCars){
+        drawWindshield();
       }
     }
-  });
-  drawWindshield();
+  }
+  requestAnimationFrame(driveAnim);
 }
 
 /* ══════════════════════════════════════════
@@ -1819,31 +2551,256 @@ function mgScrubAt(x,y){
 ══════════════════════════════════════════ */
 function initPressure(){
   var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
-  // Dirty driveway
-  c.fillStyle='#2a2520';c.fillRect(0,0,W,H);
-  // Stains
-  for(var i=0;i<22;i++){
-    var sx=Math.random()*W,sy=Math.random()*H,sr=20+Math.random()*55;
-    c.beginPath();c.arc(sx,sy,sr,0,6.28);
-    c.fillStyle='rgba(60,45,30,0.7)';c.fill();
+
+  // ── Sky ──
+  var sky=c.createLinearGradient(0,0,0,H*0.36);
+  sky.addColorStop(0,'#87ceeb');sky.addColorStop(1,'#c8e8f5');
+  c.fillStyle=sky;c.fillRect(0,0,W,H*0.36);
+
+  // ── Clouds ──
+  function cloud(cx,cy,s){
+    c.fillStyle='rgba(255,255,255,0.88)';
+    [[0,0,s],[s*.6,-s*.3,s*.7],[s*1.2,0,s*.8],[-s*.5,-s*.2,s*.6]].forEach(function(p){
+      c.beginPath();c.arc(cx+p[0],cy+p[1],p[2],0,6.28);c.fill();
+    });
   }
-  // House outline at top
-  c.strokeStyle='rgba(255,100,40,0.3)';c.lineWidth=3;
-  c.strokeRect(W*.25,0,W*.5,H*.12);
-  c.fillStyle='rgba(255,100,40,0.15)';c.fillRect(W*.25,0,W*.5,H*.12);
-  c.fillStyle='rgba(255,120,50,0.5)';c.font='9px Orbitron,sans-serif';c.textAlign='center';c.fillText('🏠 HOUSE',W*.5,H*.07);
-  // Sidewalk stripe
-  c.strokeStyle='rgba(255,255,255,0.08)';c.lineWidth=8;c.setLineDash([30,20]);
-  c.beginPath();c.moveTo(0,H*.6);c.lineTo(W,H*.6);c.stroke();c.setLineDash([]);
-  c.fillStyle='rgba(255,255,255,0.12)';c.font='8px Orbitron,sans-serif';c.textAlign='left';c.fillText('SIDEWALK',8,H*.58);
-  // Hint
-  c.fillStyle='rgba(0,245,255,0.4)';c.font='9px Orbitron,sans-serif';c.textAlign='center';c.fillText('DRAG TO PRESSURE WASH — CLEAN THE WHOLE SURFACE',W*.5,H*.95);
-  MG.state.paintCfg={col:'rgba(48,42,36,1)',w:52};
-  MG.state.coverTarget={r:40,g:35,b:28};
-  // Overlay clean layer (we paint the DIRTY color back = washing off dirt)
-  // Actually we paint the clean concrete color
-  MG.state.paintCfg={col:'rgba(165,158,148,1)',w:52};
-  MG.state.coverTarget={r:140,g:130,b:120};
+  cloud(W*.12,H*.07,H*.038);cloud(W*.52,H*.05,H*.032);cloud(W*.8,H*.09,H*.028);
+
+  // ── Lawn ──
+  c.fillStyle='#5aad3e';c.fillRect(0,H*.28,W,H*.17);
+  for(var i=0;i<W;i+=18){c.fillStyle='rgba(0,0,0,0.04)';c.fillRect(i,H*.28,9,H*.17);}
+
+  // ── Sidewalk horizontal band ──
+  var swY=H*.42,swH=H*.07;
+  c.fillStyle='#c8c2b4';c.fillRect(0,swY,W,swH);
+  c.strokeStyle='rgba(150,140,125,0.5)';c.lineWidth=1.5;
+  for(var sx2=0;sx2<W;sx2+=W*.11){
+    c.beginPath();c.moveTo(sx2,swY);c.lineTo(sx2,swY+swH);c.stroke();
+  }
+
+  // ── Driveway — perspective trapezoid ──
+  var drTop=swY+swH,drBot=H;
+  var drLT=W*.34,drRT=W*.60,drLB=W*.08,drRB=W*.85;
+  c.fillStyle='#b5afa1';
+  c.beginPath();c.moveTo(drLT,drTop);c.lineTo(drRT,drTop);
+  c.lineTo(drRB,drBot);c.lineTo(drLB,drBot);c.closePath();c.fill();
+  // Slab grid lines
+  c.strokeStyle='rgba(138,128,112,0.55)';c.lineWidth=2;
+  [0.28,0.52,0.74].forEach(function(t){
+    var y=drTop+(drBot-drTop)*t;
+    var xl=drLT+(drLB-drLT)*t,xr=drRT+(drRB-drRT)*t;
+    c.beginPath();c.moveTo(xl,y);c.lineTo(xr,y);c.stroke();
+  });
+  c.beginPath();c.moveTo((drLT+drRT)/2,drTop);c.lineTo((drLB+drRB)/2,drBot);c.stroke();
+
+  // ── Dirt stains ──
+  function stain(x,y,rx,ry,col){
+    c.save();c.translate(x,y);c.scale(rx,ry);
+    c.beginPath();c.arc(0,0,1,0,6.28);c.fillStyle=col;c.fill();c.restore();
+  }
+  var dk='rgba(58,50,38,0.75)',md='rgba(78,68,52,0.62)',lt='rgba(98,88,70,0.48)';
+  stain(W*.42,H*.60,W*.11,H*.055,dk);stain(W*.56,H*.70,W*.13,H*.05,md);
+  stain(W*.34,H*.77,W*.09,H*.04,dk);stain(W*.62,H*.84,W*.11,H*.048,md);
+  stain(W*.48,H*.89,W*.14,H*.042,lt);stain(W*.28,H*.67,W*.075,H*.038,md);
+  stain(W*.66,H*.63,W*.08,H*.035,dk);stain(W*.5,H*.54,W*.065,H*.03,md);
+  // Tyre streaks
+  for(var ti=0;ti<5;ti++){
+    var tx=drLT+(drRT-drLT)*(0.15+ti*.18);
+    c.strokeStyle='rgba(50,43,32,0.32)';c.lineWidth=10+ti*3;c.lineCap='round';
+    c.beginPath();c.moveTo(tx,drTop+4);c.lineTo(tx+(ti-2)*8,(drTop+drBot)/2);c.stroke();
+  }
+  // Sidewalk dirt patches
+  stain(W*.22,swY+swH*.5,W*.09,swH*.32,md);
+  stain(W*.7,swY+swH*.5,W*.08,swH*.28,dk);
+
+  // ── House ──
+  var hL=W*.2,hR=W*.8,hBot=H*.3,hTop=H*.03;
+  c.fillStyle='#c8714a';c.fillRect(hL,hTop,hR-hL,hBot-hTop);
+  // Bricks
+  var bhH=7,bhW=20;c.strokeStyle='rgba(155,75,38,0.3)';c.lineWidth=1;
+  for(var br=0;br<(hBot-hTop)/bhH+1;br++){
+    var boff2=(br%2===0)?0:bhW/2,by2=hTop+br*bhH;
+    c.beginPath();c.moveTo(hL,by2);c.lineTo(hR,by2);c.stroke();
+    for(var bc=0;bc<(hR-hL)/bhW+2;bc++){
+      c.beginPath();c.moveTo(hL+bc*bhW+boff2,by2);c.lineTo(hL+bc*bhW+boff2,by2+bhH);c.stroke();
+    }
+  }
+  // White trim
+  c.fillStyle='#ede8de';c.fillRect(hL,hBot-H*.028,hR-hL,H*.028);
+
+  // ── Roof ──
+  c.fillStyle='#3e3228';
+  c.beginPath();c.moveTo(hL-W*.04,hTop+H*.025);c.lineTo(W*.5,0);c.lineTo(hR+W*.04,hTop+H*.025);c.closePath();c.fill();
+  c.strokeStyle='rgba(20,14,8,0.35)';c.lineWidth=1.5;
+  for(var ri=1;ri<6;ri++){var rfrac=ri/6;c.beginPath();
+    c.moveTo(hL-W*.04+(hL+W*.04)*rfrac*0.5,hTop+H*.025*(1-rfrac));
+    c.lineTo(hR+W*.04-(hR+W*.04-W*.5)*rfrac*0.5,hTop+H*.025*(1-rfrac));c.stroke();}
+
+  // ── Garage door ──
+  var gL=W*.28,gR=W*.65,gTop2=hTop+H*.08,gBot2=hBot-H*.028;
+  c.fillStyle='#e0dace';c.fillRect(gL,gTop2,gR-gL,gBot2-gTop2);
+  c.strokeStyle='#afa89a';c.lineWidth=2;c.strokeRect(gL,gTop2,gR-gL,gBot2-gTop2);
+  var panH2=(gBot2-gTop2)/4;
+  for(var pi=1;pi<4;pi++){c.strokeStyle='rgba(165,156,140,0.7)';c.lineWidth=1.5;
+    c.beginPath();c.moveTo(gL,gTop2+pi*panH2);c.lineTo(gR,gTop2+pi*panH2);c.stroke();}
+  c.beginPath();c.moveTo((gL+gR)/2,gTop2);c.lineTo((gL+gR)/2,gBot2);c.stroke();
+  c.fillStyle='#888';c.beginPath();c.arc((gL+gR)/2,(gTop2+gBot2)/2,3.5,0,6.28);c.fill();
+
+  // ── Side window ──
+  var wX=W*.68,wY=hTop+H*.06,wW=W*.09,wH=H*.065;
+  c.fillStyle='#b8d8ea';c.fillRect(wX,wY,wW,wH);
+  c.strokeStyle='#ccc5b5';c.lineWidth=2;c.strokeRect(wX,wY,wW,wH);
+  c.strokeStyle='rgba(255,255,255,0.5)';c.lineWidth=1.5;
+  c.beginPath();c.moveTo(wX+wW/2,wY);c.lineTo(wX+wW/2,wY+wH);c.stroke();
+  c.beginPath();c.moveTo(wX,wY+wH/2);c.lineTo(wX+wW,wY+wH/2);c.stroke();
+
+  // ── Trees ──
+  function bush(bx,by,br,col){
+    c.fillStyle=col||'#3d8c2a';c.beginPath();c.arc(bx,by,br,0,6.28);c.fill();
+    c.fillStyle='rgba(255,255,255,0.07)';c.beginPath();c.arc(bx-br*.25,by-br*.25,br*.5,0,6.28);c.fill();
+  }
+  c.fillStyle='#7a5030';c.fillRect(W*.1,H*.3,7,H*.07);c.fillRect(W*.88,H*.3,7,H*.07);
+  bush(W*.11,H*.30,H*.065,'#4aaa30');bush(W*.08,H*.32,H*.045,'#3d9025');
+  bush(W*.89,H*.30,H*.06,'#4aaa30');bush(W*.86,H*.32,H*.042,'#3a8522');
+  // Fence posts right side
+  for(var fp=0;fp<5;fp++){
+    var fx=W*.78+fp*W*.055;
+    c.fillStyle='#e8e0d0';c.fillRect(fx,H*.3,6,H*.1);
+    c.fillStyle='#d5cdc0';c.fillRect(fx-1,H*.3,8,5);
+  }
+  c.strokeStyle='#d0c8ba';c.lineWidth=3;
+  c.beginPath();c.moveTo(W*.78,H*.34);c.lineTo(W*.99,H*.34);c.stroke();
+  c.beginPath();c.moveTo(W*.78,H*.37);c.lineTo(W*.99,H*.37);c.stroke();
+
+  // ── Pressure washer machine ──
+  var mX=W*.72,mY=H*.65;
+  c.fillStyle='#4a5a6a';c.fillRect(mX-15,mY-22,30,24);
+  c.strokeStyle='#2a3a4a';c.lineWidth=2;c.strokeRect(mX-15,mY-22,30,24);
+  c.fillStyle='#3a4a5a';c.fillRect(mX-9,mY-30,18,9);c.strokeRect(mX-9,mY-30,18,9);
+  // Wheels
+  [mX-11,mX+11].forEach(function(wx){
+    c.fillStyle='#1a1a1a';c.beginPath();c.arc(wx,mY+2,6,0,6.28);c.fill();
+    c.strokeStyle='#555';c.lineWidth=1;c.beginPath();c.arc(wx,mY+2,6,0,6.28);c.stroke();
+  });
+  // Hose
+  c.strokeStyle='#1e2e1e';c.lineWidth=5;c.lineCap='round';
+  c.beginPath();c.moveTo(mX-15,mY-8);
+  c.bezierCurveTo(mX-45,mY,mX-65,mY+20,mX-60,mY+38);
+  c.bezierCurveTo(mX-55,mY+50,mX-32,mY+40,mX-22,mY+22);c.stroke();
+  // Wand
+  c.strokeStyle='#667788';c.lineWidth=4;
+  c.beginPath();c.moveTo(mX-22,mY+22);c.lineTo(mX-42,mY+10);c.stroke();
+  c.strokeStyle='#99aabb';c.lineWidth=3;
+  c.beginPath();c.moveTo(mX-42,mY+10);c.lineTo(mX-56,mY+3);c.stroke();
+
+  // ── Instruction ──
+  c.fillStyle='rgba(0,0,0,0.4)';c.fillRect(0,H*.97,W,H*.03);
+  c.fillStyle='rgba(200,235,255,0.85)';c.font='9px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('SCRUB THE DIRTY DRIVEWAY & SIDEWALK CLEAN 💦',W*.5,H*.988);
+
+  MG.state.paintCfg={col:'rgba(185,180,170,1)',w:58};
+  MG.state.coverTarget={r:155,g:148,b:138};
+
+  // Store driveway/sidewalk geometry for clip + coverage sampling
+  MG.state.pw={
+    swY:swY,swH:swH,
+    drTop:drTop,drBot:H,
+    drLT:drLT,drRT:drRT,drLB:drLB,drRB:drRB,
+    mX:mX,mY:mY,
+    W:W,H:H
+  };
+
+  // Bake the static top layer (house, trees, machine) into an offscreen canvas
+  // so we can redraw it on top after every paint stroke
+  var oc=document.createElement('canvas');oc.width=W;oc.height=H;
+  var oc2=oc.getContext('2d');
+
+  // Copy current full canvas to offscreen
+  oc2.drawImage(MG.canvas,0,0);
+
+  // Now erase everything BELOW the sidewalk from the offscreen
+  // (keep only house/trees/lawn/sky — not driveway/sidewalk/dirt)
+  oc2.clearRect(0,swY,W,H-swY);
+
+  // Also draw the machine onto the offscreen so it stays on top
+  var mc2=mX,my2=mY;
+  oc2.fillStyle='#4a5a6a';oc2.fillRect(mc2-15,my2-22,30,24);
+  oc2.strokeStyle='#2a3a4a';oc2.lineWidth=2;oc2.strokeRect(mc2-15,my2-22,30,24);
+  oc2.fillStyle='#3a4a5a';oc2.fillRect(mc2-9,my2-30,18,9);oc2.strokeRect(mc2-9,my2-30,18,9);
+  [mc2-11,mc2+11].forEach(function(wx2){
+    oc2.fillStyle='#1a1a1a';oc2.beginPath();oc2.arc(wx2,my2+2,6,0,6.28);oc2.fill();
+    oc2.strokeStyle='#555';oc2.lineWidth=1;oc2.beginPath();oc2.arc(wx2,my2+2,6,0,6.28);oc2.stroke();
+  });
+  oc2.strokeStyle='#1e2e1e';oc2.lineWidth=5;oc2.lineCap='round';
+  oc2.beginPath();oc2.moveTo(mc2-15,my2-8);
+  oc2.bezierCurveTo(mc2-45,my2,mc2-65,my2+20,mc2-60,my2+38);
+  oc2.bezierCurveTo(mc2-55,my2+50,mc2-32,my2+40,mc2-22,my2+22);oc2.stroke();
+  oc2.strokeStyle='#667788';oc2.lineWidth=4;
+  oc2.beginPath();oc2.moveTo(mc2-22,my2+22);oc2.lineTo(mc2-42,my2+10);oc2.stroke();
+  oc2.strokeStyle='#99aabb';oc2.lineWidth=3;
+  oc2.beginPath();oc2.moveTo(mc2-42,my2+10);oc2.lineTo(mc2-56,my2+3);oc2.stroke();
+
+  // Draw slab lines onto offscreen so they always show over paint
+  oc2.strokeStyle='rgba(138,128,112,0.7)';oc2.lineWidth=2;
+  [0.28,0.52,0.74].forEach(function(t){
+    var y2=drTop+(H-drTop)*t;
+    var xl2=drLT+(drLB-drLT)*t,xr2=drRT+(drRB-drRT)*t;
+    oc2.beginPath();oc2.moveTo(xl2,y2);oc2.lineTo(xr2,y2);oc2.stroke();
+  });
+  oc2.beginPath();oc2.moveTo((drLT+drRT)/2,drTop);oc2.lineTo((drLB+drRB)/2,H);oc2.stroke();
+  // Sidewalk slab lines
+  oc2.strokeStyle='rgba(150,140,125,0.6)';oc2.lineWidth=1.5;
+  for(var sx3=0;sx3<W;sx3+=W*.11){
+    oc2.beginPath();oc2.moveTo(sx3,swY);oc2.lineTo(sx3,swY+swH);oc2.stroke();
+  }
+  // Driveway border lines
+  oc2.strokeStyle='rgba(120,110,95,0.5)';oc2.lineWidth=2;
+  oc2.beginPath();oc2.moveTo(drLT,drTop);oc2.lineTo(drLB,H);oc2.stroke();
+  oc2.beginPath();oc2.moveTo(drRT,drTop);oc2.lineTo(drRB,H);oc2.stroke();
+  // Instruction bar
+  oc2.fillStyle='rgba(0,0,0,0.4)';oc2.fillRect(0,H*.97,W,H*.03);
+  oc2.fillStyle='rgba(200,235,255,0.85)';oc2.font='9px Orbitron,sans-serif';oc2.textAlign='center';
+  oc2.fillText('SCRUB THE DIRTY DRIVEWAY & SIDEWALK CLEAN 💦',W*.5,H*.988);
+
+  MG.state.pw.overlay=oc;
+}
+
+function drawPressureOverlay(){
+  var pw=MG.state.pw;if(!pw||!pw.overlay)return;
+  MG.ctx.drawImage(pw.overlay,0,0);
+}
+
+function mgPressureStroke(x1,y1,x2,y2){
+  var pw=MG.state.pw;if(!pw)return;
+  var c=MG.ctx;
+  // Clip to driveway trapezoid + sidewalk band only
+  c.save();
+  c.beginPath();
+  // Sidewalk rect
+  c.rect(0,pw.swY,pw.W,pw.swH);
+  // Driveway trapezoid
+  c.moveTo(pw.drLT,pw.drTop);c.lineTo(pw.drRT,pw.drTop);
+  c.lineTo(pw.drRB,pw.drBot);c.lineTo(pw.drLB,pw.drBot);c.closePath();
+  c.clip();
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
+  c.strokeStyle='rgba(185,180,170,1)';c.lineWidth=62;c.lineCap='round';c.lineJoin='round';c.stroke();
+  c.restore();
+  // Redraw static overlay (house, trees, machine, slab lines) on top
+  drawPressureOverlay();
+  // Sample coverage inside driveway+sidewalk zone only
+  MG.timer++;
+  if(MG.timer%10!==0)return;
+  var step=16,covered=0,total=0;
+  var data=c.getImageData(0,pw.swY,pw.W,pw.H-pw.swY).data;
+  var tgt={r:155,g:148,b:138};
+  for(var py=0;py<(pw.H-pw.swY);py+=step){
+    for(var px=0;px<pw.W;px+=step){
+      var idx=(py*pw.W+px)*4;
+      if(data[idx]>tgt.r&&data[idx+1]>tgt.g&&data[idx+2]>tgt.b)covered++;
+      total++;
+    }
+  }
+  setMGProgress(Math.min(100,(covered/total)*100));
 }
 
 /* ══════════════════════════════════════════
