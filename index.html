@@ -107,8 +107,9 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 
 /* Touch controls */
 #touchControls{position:fixed;bottom:0;left:0;right:0;top:0;pointer-events:none;z-index:15;display:none;}
-#joystickWrap{position:absolute;pointer-events:all;width:130px;height:130px;}
-#joystickThumb{position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,45,120,0.9);border:2px solid #fff;top:56px;left:56px;box-shadow:0 0 10px rgba(255,45,120,0.8);pointer-events:none;}
+#joystickWrap{position:absolute;pointer-events:all;width:140px;height:140px;}
+#joystickThumb{position:absolute;width:0;height:0;pointer-events:none;/* hidden — wheel rotates instead */}
+#swWheel{position:absolute;inset:0;pointer-events:none;transition:transform 0.05s;transform-origin:center center;}
 #bThrust{position:absolute;width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:all;-webkit-tap-highlight-color:transparent;touch-action:none;background:rgba(0,0,0,0.55);border:2px solid rgba(255,240,31,0.45);color:rgba(255,240,31,0.9);font-size:24px;}
 #bThrust.pressed{background:rgba(255,240,31,0.18);border-color:rgba(255,240,31,0.9);}
 #zoomBtns{position:absolute;pointer-events:all;display:flex;flex-direction:column;gap:6px;}
@@ -375,24 +376,51 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 
 <div id="touchControls">
   <div id="joystickWrap">
-    <svg width="130" height="130" viewBox="0 0 130 130" style="position:absolute;inset:0;pointer-events:none;">
-      <ellipse cx="65" cy="108" rx="48" ry="16" fill="rgba(10,0,18,0.85)" stroke="rgba(255,45,120,0.22)" stroke-width="1.5"/>
-      <rect x="49" y="38" width="32" height="66" rx="16" fill="url(#cqGrip)" stroke="rgba(255,45,120,0.3)" stroke-width="1.2"/>
-      <rect x="53" y="28" width="24" height="14" rx="6" fill="url(#cqNeck)" stroke="rgba(255,45,120,0.25)" stroke-width="1"/>
-      <ellipse cx="65" cy="28" rx="20" ry="14" fill="url(#cqDome)" stroke="rgba(255,45,120,0.45)" stroke-width="1.5"/>
-      <ellipse cx="59" cy="23" rx="8" ry="5" fill="rgba(255,255,255,0.1)"/>
+    <svg id="swWheel" width="140" height="140" viewBox="0 0 140 140">
       <defs>
-        <linearGradient id="cqGrip" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#1a0010"/><stop offset="35%" stop-color="#38001e"/>
-          <stop offset="65%" stop-color="#38001e"/><stop offset="100%" stop-color="#1a0010"/>
-        </linearGradient>
-        <linearGradient id="cqNeck" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#1a0010"/><stop offset="50%" stop-color="#38001e"/><stop offset="100%" stop-color="#1a0010"/>
-        </linearGradient>
-        <radialGradient id="cqDome" cx="40%" cy="35%">
-          <stop offset="0%" stop-color="#802040"/><stop offset="60%" stop-color="#38001e"/><stop offset="100%" stop-color="#1a0010"/>
+        <radialGradient id="swRim" cx="50%" cy="40%">
+          <stop offset="0%" stop-color="#5a1a2a"/>
+          <stop offset="60%" stop-color="#2a0a14"/>
+          <stop offset="100%" stop-color="#1a0008"/>
+        </radialGradient>
+        <radialGradient id="swHub" cx="45%" cy="38%">
+          <stop offset="0%" stop-color="#8a2040"/>
+          <stop offset="55%" stop-color="#3a0818"/>
+          <stop offset="100%" stop-color="#1a0008"/>
+        </radialGradient>
+        <radialGradient id="swGlow" cx="50%" cy="50%">
+          <stop offset="0%" stop-color="rgba(255,45,120,0.18)"/>
+          <stop offset="100%" stop-color="rgba(255,45,120,0)"/>
         </radialGradient>
       </defs>
+      <!-- Outer glow -->
+      <circle cx="70" cy="70" r="64" fill="url(#swGlow)"/>
+      <!-- Rim outer ring -->
+      <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(255,45,120,0.5)" stroke-width="1"/>
+      <!-- Rim body (thick torus) -->
+      <circle cx="70" cy="70" r="52" fill="none" stroke="url(#swRim)" stroke-width="16"/>
+      <!-- Rim highlight -->
+      <circle cx="70" cy="70" r="52" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4" stroke-dasharray="30 300" stroke-dashoffset="-10"/>
+      <!-- Rim neon edge -->
+      <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,45,120,0.7)" stroke-width="2.5"/>
+      <circle cx="70" cy="70" r="44" fill="none" stroke="rgba(255,45,120,0.35)" stroke-width="1.5"/>
+      <!-- Spokes — 3 spokes at 0°, 120°, 240° -->
+      <!-- Spoke 1: top (12 o'clock) -->
+      <line x1="70" y1="44" x2="70" y2="26" stroke="#3a1020" stroke-width="10" stroke-linecap="round"/>
+      <line x1="70" y1="44" x2="70" y2="26" stroke="rgba(255,45,120,0.25)" stroke-width="3" stroke-linecap="round"/>
+      <!-- Spoke 2: bottom-left -->
+      <line x1="53" y1="74" x2="36" y2="83" stroke="#3a1020" stroke-width="10" stroke-linecap="round"/>
+      <line x1="53" y1="74" x2="36" y2="83" stroke="rgba(255,45,120,0.25)" stroke-width="3" stroke-linecap="round"/>
+      <!-- Spoke 3: bottom-right -->
+      <line x1="87" y1="74" x2="104" y2="83" stroke="#3a1020" stroke-width="10" stroke-linecap="round"/>
+      <line x1="87" y1="74" x2="104" y2="83" stroke="rgba(255,45,120,0.25)" stroke-width="3" stroke-linecap="round"/>
+      <!-- Hub centre circle -->
+      <circle cx="70" cy="70" r="20" fill="url(#swHub)" stroke="rgba(255,45,120,0.6)" stroke-width="2"/>
+      <circle cx="70" cy="70" r="14" fill="none" stroke="rgba(255,45,120,0.2)" stroke-width="1"/>
+      <!-- VW badge -->
+      <text x="70" y="74" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="rgba(255,45,120,0.95)" letter-spacing="-1">VW</text>
+      <!-- Turn indicator markers on rim top -->
+      <circle cx="70" cy="18" r="3" fill="rgba(255,240,31,0.6)"/>
     </svg>
     <div id="joystickThumb"></div>
   </div>
@@ -1163,46 +1191,61 @@ function loop(now){
 ═══════════════════════════════════════════════════════════ */
 function initJoystick(){
   var jw=document.getElementById('joystickWrap');
-  var jt=document.getElementById('joystickThumb');
-  var jActive=false,jId=-1,jBX=0,jBY=0,jR=52;
+  var wheel=document.getElementById('swWheel');
+  var jActive=false,jId=-1,jStartX=0,jCurX=0;
+  var maxRotDeg=42;// max visual rotation each way
 
-  function getCenter(){var r=jw.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};}
+  function applyRotation(dx){
+    var r=jw.getBoundingClientRect();
+    var norm=Math.max(-1,Math.min(1,dx/(r.width*0.45)));
+    var deg=norm*maxRotDeg;
+    wheel.style.transform='rotate('+deg+'deg)';
+    btn.left=norm<-0.22;
+    btn.right=norm>0.22;
+    // Never set thrust from wheel
+  }
+
+  function resetWheel(){
+    wheel.style.transform='rotate(0deg)';
+    btn.left=false;btn.right=false;
+  }
 
   jw.addEventListener('touchstart',function(e){
     e.preventDefault();
-    var t=e.changedTouches[0];jId=t.identifier;jActive=true;
-    var c=getCenter();jBX=c.x;jBY=c.y;
-    moveThumb(t.clientX,t.clientY);
+    var t=e.changedTouches[0];
+    jId=t.identifier;jActive=true;
+    jStartX=t.clientX;jCurX=t.clientX;
+    applyRotation(0);
   },{passive:false});
 
   window.addEventListener('touchmove',function(e){
     if(!jActive)return;
     for(var i=0;i<e.touches.length;i++){
-      if(e.touches[i].identifier===jId){moveThumb(e.touches[i].clientX,e.touches[i].clientY);return;}
+      if(e.touches[i].identifier===jId){
+        jCurX=e.touches[i].clientX;
+        applyRotation(jCurX-jStartX);
+        return;
+      }
     }
   },{passive:false});
 
   window.addEventListener('touchend',function(e){
     for(var i=0;i<e.changedTouches.length;i++){
-      if(e.changedTouches[i].identifier===jId){jActive=false;jId=-1;resetThumb();return;}
+      if(e.changedTouches[i].identifier===jId){
+        jActive=false;jId=-1;resetWheel();return;
+      }
     }
   });
 
-  function moveThumb(cx,cy){
-    var dx=cx-jBX,dy=cy-jBY;
-    var d=Math.sqrt(dx*dx+dy*dy);
-    if(d>jR){dx=dx/d*jR;dy=dy/d*jR;}
-    jt.style.left=(50+dx/jR*35)+'%';jt.style.top=(50+dy/jR*35)+'%';
-    var norm=d>3?Math.atan2(dy,dx):null;
-    if(norm!==null){
-      btn.left=dx<-jR*0.25;btn.right=dx>jR*0.25;
-      btn.thrust=dy<-jR*0.25;
-    } else {btn.left=false;btn.right=false;btn.thrust=false;}
-  }
-  function resetThumb(){
-    jt.style.left='50%';jt.style.top='50%';
-    btn.left=false;btn.right=false;btn.thrust=false;
-  }
+  // Mouse support for desktop testing
+  jw.addEventListener('mousedown',function(e){
+    jActive=true;jStartX=e.clientX;
+    applyRotation(0);
+    function onMove(e2){applyRotation(e2.clientX-jStartX);}
+    function onUp(){jActive=false;resetWheel();window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);}
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mouseup',onUp);
+  });
 }
 
 function bindBtn(id,key){
@@ -2502,20 +2545,20 @@ function mgScrubAt(x,y){
   // Only accept scrubs on the windshield zone
   if(x<zn.x||x>zn.x+zn.w||y<zn.y||y>zn.y+zn.h)return;
   MG.state.scrubbed=MG.state.scrubbed||[];
-  MG.state.scrubbed.push({x:x,y:y,r:28});
+  MG.state.scrubbed.push({x:x,y:y,r:18});
   MG.timer++;
   // Check coverage every 4 scrubs
   if(MG.timer%4===0){
     var area=zn.w*zn.h;
-    var covPx=MG.state.scrubbed.length*28*28*Math.PI;
+    var covPx=MG.state.scrubbed.length*18*18*Math.PI;
     var pct=Math.min(100,(covPx/area)*100);
-    // Bugs are considered cleaned at 70% windshield coverage
-    if(pct>=70){
+    // Bugs considered cleaned at 88% windshield coverage
+    if(pct>=88){
       wsCarCleaned();return;
     }
     // Show partial progress within this car (each car = 100/totalCars %)
     var carPct=WS.carsDone/WS.totalCars*100;
-    setMGProgress(carPct+(pct/100)*(100/WS.totalCars));
+    setMGProgress(carPct+(pct/88)*(100/WS.totalCars));
   }
   drawWindshield();
 }
@@ -2800,7 +2843,7 @@ function mgPressureStroke(x1,y1,x2,y2){
       total++;
     }
   }
-  setMGProgress(Math.min(100,(covered/total)*100));
+  setMGProgress(Math.min(100,(covered/total)*250));// 40% coverage = 100% progress
 }
 
 /* ══════════════════════════════════════════
@@ -2809,143 +2852,350 @@ function mgPressureStroke(x1,y1,x2,y2){
 function initDogwalk(){
   var W=MG.canvas.width,H=MG.canvas.height;
   MG.state={
-    phase:'walk',// walk→pee→frisbee→poop→done
+    phase:'walk',
     tasks:0,totalTasks:5,
-    player:{x:W/2,y:H*.7},
-    dog:{x:W/2+40,y:H*.7,sniffing:0,peeing:false,peeTimer:0},
-    frisbee:null,frisbeeThrown:false,
-    poop:null,poopBin:{x:W*.88,y:H*.1,w:36,h:44},
-    bushes:[{x:W*.12,y:H*.3},{x:W*.35,y:H*.55},{x:W*.7,y:H*.25},{x:W*.85,y:H*.6}],
-    dragging:false,dogOnLead:true,
+    player:{x:W*.45,y:H*.65,vx:0,vy:0},
+    dog:{x:W*.55,y:H*.65,tx:W*.55,ty:H*.65,sniffTimer:0,peeing:false,peeTimer:0,fetchTimer:0},
+    frisbee:null,frisbeeActive:false,
+    poop:null,poopCarried:false,
+    poopBin:{x:W*.88,y:H*.08,w:38,h:46},
+    bushes:[
+      {x:W*.15,y:H*.25},{x:W*.78,y:H*.2},
+      {x:W*.22,y:H*.65},{x:W*.75,y:H*.58}
+    ],
+    targetBush:-1,
     msg:'WALK THE DOG TO A BUSH! 🐕',
-    peeBushIdx:-1,frisbeeThrows:0,poopCollected:false
+    joyX:0,joyY:0,
+    frisbeeThrows:0
   };
+  // Build joystick UI for dogwalk
+  buildDogJoystick();
   MG.raf=requestAnimationFrame(dogwalkLoop);
 }
+
+var dwJoy={active:false,bx:0,by:0,dx:0,dy:0};
+function buildDogJoystick(){
+  var W=MG.canvas.width,H=MG.canvas.height;
+  // Joystick base centre — bottom left
+  dwJoy.bx=W*.18;dwJoy.by=H*.82;
+  dwJoy.dx=0;dwJoy.dy=0;dwJoy.active=false;
+  var el=MG.canvas;
+  function jDown(cx,cy){
+    var dx=cx-dwJoy.bx,dy=cy-dwJoy.by;
+    if(Math.sqrt(dx*dx+dy*dy)<60){dwJoy.active=true;jMove(cx,cy);}
+    // Frisbee throw — tap right side of screen
+    else if(cx>MG.canvas.width*.5&&MG.state.phase==='frisbee'&&!MG.state.frisbeeActive){
+      throwFrisbee(cx,cy);
+    }
+    // Pick up poop
+    else if(MG.state.phase==='poop'&&MG.state.poop&&!MG.state.poopCarried){
+      var px=cx-MG.state.poop.x,py=cy-MG.state.poop.y;
+      if(Math.sqrt(px*px+py*py)<36){MG.state.poopCarried=true;MG.state.msg='NOW DROP IT IN THE BIN! 🗑️';}
+    }
+  }
+  function jMove(cx,cy){
+    if(!dwJoy.active)return;
+    var dx=cx-dwJoy.bx,dy=cy-dwJoy.by;
+    var dist=Math.sqrt(dx*dx+dy*dy),maxR=48;
+    if(dist>maxR){dx=dx/dist*maxR;dy=dy/dist*maxR;}
+    dwJoy.dx=dx/maxR;dwJoy.dy=dy/maxR;
+  }
+  function jUp(){dwJoy.active=false;dwJoy.dx=0;dwJoy.dy=0;}
+  // Attach to canvas (clone first to clear old listeners)
+  var nc=el.cloneNode(false);nc.width=el.width;nc.height=el.height;
+  MG.ctx=nc.getContext('2d');MG.canvas=nc;
+  el.parentNode.replaceChild(nc,el);
+  nc.addEventListener('mousedown',function(e){var r=nc.getBoundingClientRect();jDown(e.clientX-r.left,e.clientY-r.top);});
+  nc.addEventListener('mousemove',function(e){var r=nc.getBoundingClientRect();jMove(e.clientX-r.left,e.clientY-r.top);});
+  nc.addEventListener('mouseup',jUp);
+  nc.addEventListener('touchstart',function(e){e.preventDefault();var r=nc.getBoundingClientRect(),t=e.touches[0];jDown(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+  nc.addEventListener('touchmove',function(e){e.preventDefault();var r=nc.getBoundingClientRect(),t=e.touches[0];jMove(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+  nc.addEventListener('touchend',jUp);
+}
+
+function throwFrisbee(tx,ty){
+  var S=MG.state;
+  var ang=Math.atan2(ty-S.player.y,tx-S.player.x);
+  var spd=9;
+  S.frisbee={x:S.player.x,y:S.player.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,age:0};
+  S.frisbeeActive=true;
+  S.msg='FETCH! 🥏';
+}
+
 function dogwalkLoop(){
   if(MG.id!=='dogwalk')return;
-  drawDogwalk();
-  MG.raf=requestAnimationFrame(dogwalkLoop);
-}
-function drawDogwalk(){
-  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height,S=MG.state;
-  // Park bg
-  c.fillStyle='#1a3a18';c.fillRect(0,0,W,H);
-  c.fillStyle='#8B7355';c.fillRect(W*.4,0,W*.2,H);// path
-  // Bushes
-  S.bushes.forEach(function(b,i){
-    c.beginPath();c.arc(b.x,b.y,26,0,6.28);
-    c.fillStyle=i===S.peeBushIdx?'#3a8a30':'#2d6b28';
-    c.shadowBlur=i===S.peeBushIdx?16:6;c.shadowColor='#39ff14';c.fill();c.shadowBlur=0;
-    if(i===S.peeBushIdx){c.fillStyle='#fff01f';c.font='14px sans-serif';c.textAlign='center';c.fillText('💦',b.x,b.y+6);}
-  });
-  // Poop bin
-  c.fillStyle='#222';c.fillRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
-  c.strokeStyle='#aaa';c.lineWidth=1.5;c.strokeRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
-  c.font='18px sans-serif';c.textAlign='center';c.fillText('🗑️',S.poopBin.x+S.poopBin.w/2,S.poopBin.y+S.poopBin.h*.7);
-  // Poop on ground
-  if(S.poop&&!S.poopCollected){c.font='20px sans-serif';c.textAlign='center';c.fillText('💩',S.poop.x,S.poop.y);}
-  if(S.poop&&S.poopCollected&&S.dragging){c.font='20px sans-serif';c.textAlign='center';c.fillText('💩',S.player.x,S.player.y-30);}
-  // Frisbee
-  if(S.frisbee){c.beginPath();c.arc(S.frisbee.x,S.frisbee.y,12,0,6.28);c.fillStyle='#fff01f';c.shadowBlur=12;c.shadowColor='#fff01f';c.fill();c.shadowBlur=0;}
-  // Lead line
-  if(S.dogOnLead){c.beginPath();c.moveTo(S.player.x,S.player.y-10);c.lineTo(S.dog.x,S.dog.y-10);c.strokeStyle='rgba(255,255,255,0.35)';c.lineWidth=1.5;c.stroke();}
-  // Player (stick figure)
-  drawMgStick(c,S.player.x,S.player.y,'#00f5ff',null,Date.now()*.001);
-  // Dog
-  drawMgDog(c,S.dog.x,S.dog.y,S.dog.sniffing>0,S.dog.peeing);
-  // Message
-  c.fillStyle='rgba(0,0,0,0.55)';c.fillRect(0,H*.85,W,H*.15);
-  c.fillStyle='#fff01f';c.font='10px Orbitron,sans-serif';c.textAlign='center';c.fillText(S.msg,W/2,H*.93);
-  // Phase progress dots
-  var phases=['🦮','🌿','🥏','💩','✅'];
-  for(var i=0;i<phases.length;i++){
-    c.font='16px sans-serif';c.textAlign='center';
-    c.globalAlpha=i<S.tasks?1.0:0.25;c.fillText(phases[i],W/2+(i-2)*28,H*.83);
+  var S=MG.state,W=MG.canvas.width,H=MG.canvas.height;
+  var spd=3.2;
+
+  // Move player via joystick
+  if(dwJoy.active&&(dwJoy.dx||dwJoy.dy)){
+    S.player.x=Math.max(16,Math.min(W-16,S.player.x+dwJoy.dx*spd));
+    S.player.y=Math.max(16,Math.min(H*.78,S.player.y+dwJoy.dy*spd));
   }
-  c.globalAlpha=1;
-}
-function drawMgStick(c,x,y,col,hair,t){
-  var bob=Math.sin(t*3)*3;
-  c.strokeStyle=col;c.lineWidth=2.5;c.shadowBlur=8;c.shadowColor=col;
-  c.beginPath();c.arc(x,y-22+bob,8,0,6.28);c.stroke();
-  c.beginPath();c.moveTo(x,y-14+bob);c.lineTo(x,y+2+bob);c.stroke();
-  c.beginPath();c.moveTo(x-10,y-8+bob);c.lineTo(x+10,y-8+bob);c.stroke();
-  c.beginPath();c.moveTo(x,y+2+bob);c.lineTo(x-8,y+18+bob);c.moveTo(x,y+2+bob);c.lineTo(x+8,y+18+bob);c.stroke();
-  c.shadowBlur=0;
-}
-function drawMgDog(c,x,y,sniffing,peeing){
-  var t=Date.now()*.003;
-  c.fillStyle='#c8a060';c.strokeStyle='#c8a060';c.lineWidth=2;c.shadowBlur=6;c.shadowColor='#c8a060';
-  // Body
-  c.beginPath();c.ellipse(x,y,18,11,0,0,6.28);c.fill();
-  // Head
-  c.beginPath();c.arc(x+(sniffing?16:14),y-(sniffing?6:8),9,0,6.28);c.fill();
-  // Ears
-  c.beginPath();c.ellipse(x+20,y-(sniffing?2:10),5,8,sniffing?.6:-.3,0,6.28);c.fill();
-  // Tail
-  c.beginPath();c.moveTo(x-18,y-4);c.quadraticCurveTo(x-28,y-20,x-22,y-26);c.strokeStyle='#c8a060';c.lineWidth=3;c.stroke();
-  // Legs
-  var legT=peeing?0:Math.sin(t)*8;
-  c.beginPath();c.moveTo(x-10,y+10);c.lineTo(x-10+legT,y+24);c.moveTo(x-4,y+10);c.lineTo(x-4-legT,y+24);c.moveTo(x+4,y+10);c.lineTo(x+4+legT,y+24);c.moveTo(x+10,y+10);c.lineTo(x+10-legT,y+24);c.strokeStyle='#c8a060';c.lineWidth=2;c.stroke();
-  if(peeing){c.beginPath();c.moveTo(x+16,y+8);c.lineTo(x+26,y+14);c.strokeStyle='rgba(255,240,80,0.8)';c.lineWidth=2;c.stroke();}
-  c.shadowBlur=0;
-}
-function mgDogDown(x,y){
-  var S=MG.state;
-  if(S.phase==='poop'&&S.poop&&!S.poopCollected){
-    var dx=x-S.poop.x,dy=y-S.poop.y;
-    if(Math.sqrt(dx*dx+dy*dy)<30){S.poopCollected=true;S.dragging=true;return;}
-  }
-  S.player.x=x;S.player.y=y;S.dog.x=x+40;S.dog.y=y;
-  // Check bush proximity
+
+  // Dog follows player with slight lag (on lead)
+  var ddx=S.player.x-S.dog.x+28,ddy=S.player.y-S.dog.y;
+  var ddist=Math.sqrt(ddx*ddx+ddy*ddy);
+  if(ddist>38){S.dog.x+=ddx/ddist*2.2;S.dog.y+=ddy/ddist*2.2;}
+
+  // PHASE: walk — move near a bush
   if(S.phase==='walk'){
     S.bushes.forEach(function(b,i){
-      var dx=x-b.x,dy=y-b.y;
-      if(Math.sqrt(dx*dx+dy*dy)<50&&S.peeBushIdx<0){
-        S.peeBushIdx=i;S.dog.sniffing=60;S.msg='GOOD BOY! SNIFFING THE BUSH... 🐽';
+      if(i===S.targetBush)return;
+      var dx=S.dog.x-b.x,dy=S.dog.y-b.y;
+      if(Math.sqrt(dx*dx+dy*dy)<42){
+        S.targetBush=i;S.dog.sniffTimer=90;
+        S.phase='sniff';S.msg='DOG IS SNIFFING... 🐽';
       }
     });
   }
-  if(S.phase==='frisbee'){
-    var ang=Math.atan2(y-S.player.y,x-S.player.x);
-    S.frisbee={x:S.player.x,y:S.player.y,vx:Math.cos(ang)*8,vy:Math.sin(ang)*8,age:0};
-  }
-}
-function mgDogMove(x,y){
-  var S=MG.state;
-  if(S.dragging&&S.poopCollected){S.player.x=x;S.player.y=y;}
-  else{S.player.x=x;S.player.y=y;if(S.dogOnLead){S.dog.x=x+40;S.dog.y=y;}}
-  // Dog peeing phase
-  if(S.phase==='pee'&&S.peeBushIdx>=0){
-    S.dog.sniffing=Math.max(0,S.dog.sniffing-1);
-    if(S.dog.sniffing===0&&!S.dog.peeing){S.dog.peeing=true;S.dog.peeTimer=60;S.msg='DOING HIS BUSINESS... 💦';}
-  }
-  if(S.dog.peeing){S.dog.peeTimer--;if(S.dog.peeTimer<=0){S.dog.peeing=false;advanceDogPhase();}}
-  // Frisbee movement
-  if(S.frisbee){
-    S.frisbee.x+=S.frisbee.vx;S.frisbee.y+=S.frisbee.vy;S.frisbee.age++;
-    if(S.frisbee.age>60){S.dog.x=S.frisbee.x;S.dog.y=S.frisbee.y;S.frisbee=null;S.frisbeeThrows++;if(S.frisbeeThrows>=2)advanceDogPhase();}
-  }
-}
-function mgDogUp(x,y){
-  var S=MG.state;
-  if(S.dragging){
-    S.dragging=false;
-    // Check bin drop
-    if(x>S.poopBin.x&&x<S.poopBin.x+S.poopBin.w&&y>S.poopBin.y&&y<S.poopBin.y+S.poopBin.h){
-      S.poop=null;advanceDogPhase();
+
+  // PHASE: sniff — wait for sniff timer
+  if(S.phase==='sniff'){
+    S.dog.sniffTimer--;
+    if(S.dog.sniffTimer<=0){
+      S.phase='pee';S.dog.peeing=true;S.dog.peeTimer=80;
+      S.msg='DOING HIS BUSINESS... 💦';
     }
   }
+
+  // PHASE: pee — wait for pee timer
+  if(S.phase==='pee'){
+    S.dog.peeTimer--;
+    if(S.dog.peeTimer<=0){
+      S.dog.peeing=false;
+      S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
+      S.phase='frisbee';S.frisbeeActive=false;
+      S.msg='NOW THROW THE FRISBEE! TAP RIGHT SIDE 🥏';
+    }
+  }
+
+  // PHASE: frisbee — throw and fetch
+  if(S.phase==='frisbee'&&S.frisbee){
+    S.frisbee.x+=S.frisbee.vx;S.frisbee.y+=S.frisbee.vy;
+    S.frisbee.vy+=0.08;// slight gravity arc
+    S.frisbee.age++;
+    // Dog chases frisbee when thrown
+    var fdx=S.frisbee.x-S.dog.x,fdy=S.frisbee.y-S.dog.y;
+    var fdist=Math.sqrt(fdx*fdx+fdy*fdy);
+    if(fdist>8){S.dog.x+=fdx/fdist*4.5;S.dog.y+=fdy/fdist*4.5;}
+    // Frisbee lands or dog catches it
+    if(S.frisbee.age>55||fdist<18){
+      S.dog.x=S.frisbee.x;S.dog.y=S.frisbee.y;
+      S.dog.fetchTimer=40;S.frisbee=null;
+      S.frisbeeThrows++;S.frisbeeActive=false;
+      if(S.frisbeeThrows>=2){
+        S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
+        S.phase='poop';
+        S.poop={x:S.dog.x+20,y:S.dog.y+20};
+        S.poopCarried=false;
+        S.msg='TAP THE POOP TO PICK IT UP! 💩';
+      }else{
+        S.msg='GOOD CATCH! THROW AGAIN! 🥏';
+      }
+    }
+  }
+
+  // PHASE: poop — carry to bin
+  if(S.phase==='poop'&&S.poopCarried){
+    // Poop follows player while carried
+    S.poop.x=S.player.x+10;S.poop.y=S.player.y-20;
+    // Check bin drop (proximity)
+    var bx=S.poopBin.x+S.poopBin.w/2,by2=S.poopBin.y+S.poopBin.h/2;
+    var bdx=S.player.x-bx,bdy=S.player.y-by2;
+    if(Math.sqrt(bdx*bdx+bdy*bdy)<40){
+      S.poop=null;S.poopCarried=false;
+      S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
+      S.phase='done2';S.msg='GREAT WALK! ALL DONE! ✅';
+      S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
+      setTimeout(function(){setMGProgress(100);},400);
+    }
+  }
+
+  drawDogwalk();
+  MG.raf=requestAnimationFrame(dogwalkLoop);
 }
-function advanceDogPhase(){
-  var S=MG.state,W=MG.canvas.width,H=MG.canvas.height;
-  S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
-  if(S.phase==='walk'){S.phase='pee';S.msg='NOW WAIT FOR HIM TO PEE! 🌿';}
-  else if(S.phase==='pee'){S.phase='frisbee';S.frisbeeThrows=0;S.msg='THROW THE FRISBEE! TAP AHEAD OF DOG 🥏';S.frisbee=null;}
-  else if(S.phase==='frisbee'){S.phase='poop';S.poop={x:S.dog.x+20,y:S.dog.y+30};S.msg='PICK UP THE POOP & DROP IN BIN! 💩';}
-  else if(S.phase==='poop'){S.phase='done';S.msg='GREAT WALK! ALL DONE! ✅';}
+
+function drawDogwalk(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height,S=MG.state;
+
+  // Park background
+  c.fillStyle='#2a5a1a';c.fillRect(0,0,W,H);
+  // Grass texture stripes
+  for(var gi=0;gi<W;gi+=20){c.fillStyle='rgba(0,0,0,0.04)';c.fillRect(gi,0,10,H);}
+  // Path through park
+  c.fillStyle='#8B7355';
+  c.beginPath();c.moveTo(W*.35,0);c.lineTo(W*.6,0);c.lineTo(W*.72,H);c.lineTo(W*.28,H);c.closePath();c.fill();
+  // Path edge lines
+  c.strokeStyle='rgba(120,100,70,0.4)';c.lineWidth=1.5;c.setLineDash([8,8]);
+  c.beginPath();c.moveTo(W*.35,0);c.lineTo(W*.28,H);c.stroke();
+  c.beginPath();c.moveTo(W*.6,0);c.lineTo(W*.72,H);c.stroke();
+  c.setLineDash([]);
+
+  // Bushes
+  S.bushes.forEach(function(b,i){
+    var done=i===S.targetBush&&S.tasks>0;
+    c.beginPath();c.arc(b.x,b.y,28,0,6.28);
+    c.fillStyle=done?'#3a9a30':'#2d6b28';
+    c.shadowBlur=done?18:8;c.shadowColor='#39ff14';c.fill();c.shadowBlur=0;
+    // Highlight on bush
+    c.fillStyle='rgba(255,255,255,0.07)';c.beginPath();c.arc(b.x-6,b.y-6,12,0,6.28);c.fill();
+    if(done){c.font='14px sans-serif';c.textAlign='center';c.fillText('💦',b.x,b.y+5);}
+  });
+
+  // Poop bin
+  c.fillStyle='#333';c.fillRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
+  c.strokeStyle='#aaa';c.lineWidth=2;c.strokeRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
+  c.font='20px sans-serif';c.textAlign='center';c.fillText('🗑️',S.poopBin.x+S.poopBin.w/2,S.poopBin.y+S.poopBin.h*.72);
+  // Bin glow when carrying poop
+  if(S.poopCarried){c.strokeStyle='rgba(255,240,60,0.7)';c.lineWidth=3;c.shadowBlur=14;c.shadowColor='#fff01f';c.strokeRect(S.poopBin.x-2,S.poopBin.y-2,S.poopBin.w+4,S.poopBin.h+4);c.shadowBlur=0;}
+
+  // Poop on ground (if not carried)
+  if(S.poop&&!S.poopCarried){
+    c.font='22px sans-serif';c.textAlign='center';c.fillText('💩',S.poop.x,S.poop.y);
+    // Pulse ring around poop to show it's tappable
+    c.strokeStyle='rgba(255,200,60,0.5)';c.lineWidth=2;
+    c.beginPath();c.arc(S.poop.x,S.poop.y-6,22+Math.sin(Date.now()*.006)*4,0,6.28);c.stroke();
+  }
+
+  // Frisbee
+  if(S.frisbee){
+    c.save();c.translate(S.frisbee.x,S.frisbee.y);
+    c.rotate(S.frisbee.age*0.2);
+    c.beginPath();c.ellipse(0,0,13,5,0,0,6.28);
+    c.fillStyle='#fff01f';c.shadowBlur=12;c.shadowColor='#fff01f';c.fill();c.shadowBlur=0;
+    c.strokeStyle='rgba(200,180,0,0.6)';c.lineWidth=1.5;c.stroke();
+    c.restore();
+  }
+  // Frisbee throw hint (right side tap zone)
+  if(S.phase==='frisbee'&&!S.frisbeeActive){
+    c.fillStyle='rgba(255,240,60,0.08)';c.fillRect(W*.5,0,W*.5,H*.8);
+    c.fillStyle='rgba(255,240,60,0.4)';c.font='10px Orbitron,sans-serif';c.textAlign='center';
+    c.fillText('TAP HERE TO THROW',W*.75,H*.45);
+  }
+
+  // Lead line
+  c.beginPath();c.moveTo(S.player.x,S.player.y-8);c.lineTo(S.dog.x,S.dog.y-8);
+  c.strokeStyle='rgba(255,255,255,0.3)';c.lineWidth=1.5;c.stroke();
+
+  // Player
+  drawMgStick(c,S.player.x,S.player.y,'#00f5ff',null,Date.now()*.001);
+
+  // Dog
+  drawMgDog(c,S.dog.x,S.dog.y,S.phase==='sniff',S.dog.peeing,S.dog.fetchTimer>0);
+
+  // Message bar
+  c.fillStyle='rgba(0,0,0,0.6)';c.fillRect(0,H*.82,W,H*.12);
+  c.fillStyle='#fff01f';c.font='bold 10px Orbitron,sans-serif';c.textAlign='center';
+  c.shadowBlur=8;c.shadowColor='#fff01f';c.fillText(S.msg,W/2,H*.895);c.shadowBlur=0;
+
+  // Progress phases
+  var phases=['🦮','🌿','🥏','💩','✅'];
+  for(var i=0;i<phases.length;i++){
+    c.globalAlpha=i<S.tasks?1.0:0.22;
+    c.font='18px sans-serif';c.textAlign='center';c.fillText(phases[i],W*.5+(i-2)*28,H*.95);
+  }
+  c.globalAlpha=1;
+
+  // Joystick
+  var jbx=dwJoy.bx,jby=dwJoy.by;
+  c.beginPath();c.arc(jbx,jby,48,0,6.28);
+  c.fillStyle='rgba(0,0,0,0.3)';c.fill();
+  c.strokeStyle='rgba(255,255,255,0.2)';c.lineWidth=2;c.stroke();
+  // Stick
+  var sx=jbx+(dwJoy.active?dwJoy.dx*38:0),sy=jby+(dwJoy.active?dwJoy.dy*38:0);
+  c.beginPath();c.arc(sx,sy,22,0,6.28);
+  c.fillStyle='rgba(0,245,255,0.5)';c.fill();
+  c.strokeStyle='rgba(0,245,255,0.7)';c.lineWidth=2;c.stroke();
 }
+
+function drawMgDog(c,x,y,sniffing,peeing,fetching){
+  var t=Date.now()*.003;
+  var walkCycle=peeing?0:(fetching?Math.sin(t*6)*10:Math.sin(t*4)*6);
+  var col='#c8a060',dark='#a07840';
+
+  // Shadow
+  c.fillStyle='rgba(0,0,0,0.18)';c.beginPath();c.ellipse(x+2,y+14,20,6,0,0,6.28);c.fill();
+
+  // Legs (behind body)
+  c.strokeStyle=dark;c.lineWidth=4;c.lineCap='round';
+  if(peeing){
+    // Leg raised for peeing
+    c.beginPath();c.moveTo(x+12,y+8);c.lineTo(x+22,y-4);c.stroke();
+    c.beginPath();c.moveTo(x-10,y+8);c.lineTo(x-10,y+22);c.stroke();
+    c.beginPath();c.moveTo(x-2,y+8);c.lineTo(x-2,y+22);c.stroke();
+    c.beginPath();c.moveTo(x+6,y+8);c.lineTo(x+6,y+22);c.stroke();
+  }else{
+    c.beginPath();c.moveTo(x-10,y+8);c.lineTo(x-10-walkCycle*.5,y+22);c.stroke();
+    c.beginPath();c.moveTo(x-2,y+8);c.lineTo(x-2+walkCycle*.5,y+22);c.stroke();
+    c.beginPath();c.moveTo(x+6,y+8);c.lineTo(x+6-walkCycle*.5,y+22);c.stroke();
+    c.beginPath();c.moveTo(x+12,y+8);c.lineTo(x+12+walkCycle*.5,y+22);c.stroke();
+  }
+
+  // Body
+  c.fillStyle=col;c.shadowBlur=4;c.shadowColor='rgba(200,160,80,0.3)';
+  c.beginPath();c.ellipse(x,y,20,11,0,0,6.28);c.fill();c.shadowBlur=0;
+  // Body shading
+  c.fillStyle='rgba(0,0,0,0.12)';c.beginPath();c.ellipse(x+2,y+2,16,8,0.2,0,6.28);c.fill();
+
+  // Tail
+  var tailWag=Math.sin(t*6)*0.5;
+  c.strokeStyle=col;c.lineWidth=4;c.lineCap='round';
+  c.beginPath();c.moveTo(x-18,y-2);
+  c.quadraticCurveTo(x-30+Math.cos(tailWag)*8,y-18+Math.sin(tailWag)*8,x-26+Math.cos(tailWag)*12,y-28+Math.sin(tailWag)*10);
+  c.stroke();
+
+  // Head (slightly forward when sniffing)
+  var hx=x+(sniffing?18:14),hy=y-(sniffing?4:8);
+  c.fillStyle=col;c.beginPath();c.arc(hx,hy,10,0,6.28);c.fill();
+
+  // ── Ears (triangles) ──
+  c.fillStyle=dark;
+  // Left ear
+  c.beginPath();c.moveTo(hx-6,hy-8);c.lineTo(hx-12,hy-20);c.lineTo(hx-1,hy-8);c.closePath();c.fill();
+  // Right ear
+  c.beginPath();c.moveTo(hx+2,hy-9);c.lineTo(hx+10,hy-20);c.lineTo(hx+8,hy-7);c.closePath();c.fill();
+
+  // ── Eyes ──
+  c.fillStyle='#1a1008';
+  c.beginPath();c.arc(hx-3,hy-2,2.2,0,6.28);c.fill();
+  c.beginPath();c.arc(hx+4,hy-2,2.2,0,6.28);c.fill();
+  // Eye shine
+  c.fillStyle='rgba(255,255,255,0.7)';
+  c.beginPath();c.arc(hx-2,hy-3,0.8,0,6.28);c.fill();
+  c.beginPath();c.arc(hx+5,hy-3,0.8,0,6.28);c.fill();
+
+  // ── Nose ──
+  c.fillStyle='#4a2a10';c.beginPath();c.arc(hx+8+(sniffing?1:0),hy+1,2.5,0,6.28);c.fill();
+
+  // ── Red tongue ──
+  c.fillStyle='#e03040';
+  c.beginPath();
+  c.ellipse(hx+6,hy+8,4,6,0.2,0,Math.PI);
+  c.fill();
+  // Tongue groove
+  c.strokeStyle='rgba(180,10,20,0.5)';c.lineWidth=1;
+  c.beginPath();c.moveTo(hx+6,hy+8);c.lineTo(hx+6,hy+13);c.stroke();
+
+  // Pee stream
+  if(peeing){
+    c.strokeStyle='rgba(255,240,60,0.75)';c.lineWidth=2;c.lineCap='round';
+    c.beginPath();c.moveTo(x+20,y+4);
+    c.quadraticCurveTo(x+28,y+14,x+24,y+24);c.stroke();
+  }
+
+  // Fetch ball in mouth
+  if(fetching){
+    c.fillStyle='#fff01f';c.beginPath();c.arc(hx+12,hy+4,5,0,6.28);c.fill();
+    c.strokeStyle='rgba(200,180,0,0.6)';c.lineWidth=1;c.stroke();
+  }
+}
+
+// Stub input handlers — dog uses its own canvas listeners built in buildDogJoystick
+function mgDogDown(x,y){}
+function mgDogMove(x,y){}
+function mgDogUp(x,y){}
+function advanceDogPhase(){}
 
 /* ══════════════════════════════════════════
    GAME 7 — MERCH STAND (drag items to fans)
