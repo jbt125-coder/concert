@@ -923,31 +923,40 @@ function drawMap() {
     [[34,8],[34,16],[50,16],[50,8]]
   ];
 
-  // Draw state fills
-  ctx.fillStyle = 'rgba(0,30,60,0.4)';
+  // Unique neon color per state, matching reference image style
+  var STATE_COLS = [
+    '#ff2d78','#00f5ff','#39ff14','#fff01f','#bf5fff',
+    '#ff6b1a','#ff2d78','#00f5ff','#39ff14','#fff01f',
+    '#bf5fff','#ff6b1a','#ff2d78','#00f5ff','#39ff14',
+    '#fff01f','#bf5fff','#ff6b1a','#ff2d78','#00f5ff',
+    '#39ff14','#fff01f','#bf5fff','#ff6b1a','#ff2d78',
+    '#00f5ff','#39ff14','#fff01f','#bf5fff','#ff6b1a',
+    '#ff2d78','#00f5ff','#39ff14','#fff01f','#bf5fff',
+    '#ff6b1a','#ff2d78','#00f5ff','#39ff14','#fff01f',
+    '#bf5fff','#ff6b1a','#ff2d78','#00f5ff','#39ff14',
+    '#fff01f','#bf5fff','#ff6b1a','#ff2d78','#00f5ff'
+  ];
+
+  ctx.lineWidth = isMapView ? 0.55 : 0.32;
   for (i = 0; i < STATES.length; i++) {
     var sp = STATES[i];
+    var scol = STATE_COLS[i % STATE_COLS.length];
     ctx.beginPath();
     ctx.moveTo(sp[0][0], sp[0][1]);
     for (var si = 1; si < sp.length; si++) ctx.lineTo(sp[si][0], sp[si][1]);
     ctx.closePath();
-    ctx.fill();
-  }
 
-  // Draw state borders with neon glow
-  ctx.strokeStyle = 'rgba(0,245,255,0.18)';
-  ctx.shadowColor = 'rgba(0,245,255,0.25)';
-  ctx.shadowBlur = 4;
-  ctx.lineWidth = isMapView ? 0.4 : 0.25;
-  for (i = 0; i < STATES.length; i++) {
-    var sp2 = STATES[i];
-    ctx.beginPath();
-    ctx.moveTo(sp2[0][0], sp2[0][1]);
-    for (var si2 = 1; si2 < sp2.length; si2++) ctx.lineTo(sp2[si2][0], sp2[si2][1]);
-    ctx.closePath();
+    // Dim fill
+    ctx.fillStyle = 'rgba(0,10,30,0.55)';
+    ctx.fill();
+
+    // Glowing neon border
+    ctx.strokeStyle = scol;
+    ctx.shadowColor = scol;
+    ctx.shadowBlur  = isMapView ? 8 : 5;
     ctx.stroke();
+    ctx.shadowBlur = 0;
   }
-  ctx.shadowBlur = 0;
 
   ctx.strokeStyle = 'rgba(0,245,255,0.04)';
   ctx.lineWidth = 0.15;
@@ -1039,62 +1048,252 @@ function drawBus() {
   var by = bus.y * 100;
   ctx.save();
   ctx.translate(bx, by);
-  ctx.rotate(bus.angle);
 
-  var s = isMapView ? 1.1 : 1.9;
+  // In map view: tiny side-profile, no rotation
+  // In drive view: larger side-profile, flip based on direction
+  var s = isMapView ? 1.8 : 4.2;
+  var facingRight = Math.cos(bus.angle) >= 0;
+  if (!isMapView && !facingRight) ctx.scale(-1, 1);
 
-  ctx.shadowBlur  = 16;
-  ctx.shadowColor = 'rgba(255,240,31,0.7)';
+  drawVWBusSideProfile(ctx, s, !isMapView);
+  ctx.restore();
+}
 
-  ctx.fillStyle = '#f0c038';
-  ctx.fillRect(-s*1.8, -s*0.88, s*3.6, s*1.76);
+function drawVWBusSideProfile(c, s, showFigs) {
+  // Color scheme: multicolor neon outline like reference
+  var bodyCol  = '#ff2d78';   // pink/red main outline
+  var roofCol  = '#00f5ff';   // cyan roof
+  var wheelCol = '#4466ff';   // blue wheels
+  var windCol  = '#39ff14';   // green windshield area
+  var accentCol= '#bf5fff';   // purple accents
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
 
-  ctx.fillStyle = '#d9a828';
-  ctx.fillRect(s*1.0, -s*0.84, s*0.8, s*1.68);
+  // ── MAIN BODY outline ──
+  // Body is roughly: left x=-s*3, right x=s*2.2, top y=-s*1.4, bottom y=s*0.5
+  c.strokeStyle = bodyCol;
+  c.shadowColor = bodyCol;
+  c.shadowBlur  = s * 1.8;
+  c.lineWidth   = s * 0.13;
+  c.beginPath();
+  // bottom line
+  c.moveTo(-s*2.8,  s*0.55);
+  c.lineTo( s*2.0,  s*0.55);
+  // front bumper curve up
+  c.lineTo( s*2.2,  s*0.35);
+  c.lineTo( s*2.3,  s*0.0);
+  // front nose - VW split windshield
+  c.lineTo( s*2.2, -s*0.6);
+  c.lineTo( s*1.6, -s*1.1);
+  // roof flat
+  c.lineTo(-s*1.8, -s*1.4);
+  // rear top curve
+  c.lineTo(-s*2.6, -s*1.1);
+  c.lineTo(-s*2.85,-s*0.4);
+  // rear bottom
+  c.lineTo(-s*2.8,  s*0.55);
+  c.stroke();
+  c.shadowBlur = 0;
 
-  ctx.fillStyle = 'rgba(120,230,255,0.72)';
-  ctx.fillRect(s*1.02, -s*0.64, s*0.72, s*1.08);
+  // ── ROOF color change ──
+  c.strokeStyle = roofCol;
+  c.shadowColor = roofCol;
+  c.shadowBlur  = s * 1.6;
+  c.lineWidth   = s * 0.12;
+  c.beginPath();
+  c.moveTo(-s*1.8, -s*1.4);
+  c.lineTo( s*1.6, -s*1.1);
+  c.stroke();
+  // Roof lights (little dots on top like reference)
+  var lightCols2 = ['#ff2d78','#39ff14','#00f5ff','#ff2d78'];
+  for (var li = 0; li < 4; li++) {
+    var lx2 = -s*1.4 + li * s*0.8;
+    c.beginPath();
+    c.arc(lx2, -s*1.42, s*0.09, 0, 6.2832);
+    c.fillStyle   = lightCols2[li];
+    c.shadowColor = lightCols2[li];
+    c.shadowBlur  = s * 1.5;
+    c.fill();
+    c.shadowBlur = 0;
+  }
 
-  ctx.fillStyle = 'rgba(120,230,255,0.55)';
-  ctx.fillRect(-s*1.35, -s*0.58, s*0.65, s*0.62);
-  ctx.fillRect(-s*0.55, -s*0.58, s*0.65, s*0.62);
+  // ── SEPARATOR line (cab vs body) ──
+  c.strokeStyle = windCol;
+  c.shadowColor = windCol;
+  c.shadowBlur  = s * 1.4;
+  c.lineWidth   = s * 0.10;
+  c.beginPath();
+  c.moveTo(s*0.85, -s*1.38);
+  c.lineTo(s*0.85,  s*0.55);
+  c.stroke();
+  c.shadowBlur = 0;
 
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = s * 0.08;
-  ctx.beginPath();
-  ctx.arc(s*0.2, 0, s*0.32, 0, 6.2832);
-  ctx.stroke();
+  // ── WINDSHIELD (front cab) ──
+  c.strokeStyle = windCol;
+  c.shadowColor = windCol;
+  c.shadowBlur  = s * 1.2;
+  c.lineWidth   = s * 0.09;
+  // upper windshield
+  c.beginPath();
+  c.moveTo(s*0.9, -s*1.05);
+  c.lineTo(s*2.1, -s*0.55);
+  c.stroke();
+  // lower windshield split
+  c.beginPath();
+  c.moveTo(s*0.9, -s*0.35);
+  c.lineTo(s*2.15, s*0.0);
+  c.stroke();
+  // horizontal split bar
+  c.beginPath();
+  c.moveTo(s*0.9, -s*0.65);
+  c.lineTo(s*2.2, -s*0.28);
+  c.stroke();
+  c.shadowBlur = 0;
 
-  ctx.shadowBlur  = 9;
-  ctx.shadowColor = '#74b9ff';
-  ctx.fillStyle   = '#74b9ff';
-  ctx.beginPath(); ctx.ellipse( s*1.25, -s*0.94, s*0.28, s*0.20, 0, 0, 6.2832); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( s*1.25,  s*0.94, s*0.28, s*0.20, 0, 0, 6.2832); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-s*1.05, -s*0.94, s*0.28, s*0.20, 0, 0, 6.2832); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-s*1.05,  s*0.94, s*0.28, s*0.20, 0, 0, 6.2832); ctx.fill();
-  ctx.shadowBlur = 0;
+  // ── PASSENGER WINDOWS (3 windows on body) ──
+  var winData = [
+    {x:-s*1.6, w:s*0.75},
+    {x:-s*0.7, w:s*0.75},
+    {x: s*0.02,w:s*0.72}
+  ];
+  var winCols = ['#ff2d78','#39ff14','#00f5ff'];
+  for (var wi = 0; wi < winData.length; wi++) {
+    var wd = winData[wi];
+    c.strokeStyle = winCols[wi];
+    c.shadowColor = winCols[wi];
+    c.shadowBlur  = s * 1.2;
+    c.lineWidth   = s * 0.09;
+    c.beginPath();
+    c.rect(wd.x, -s*1.05, wd.w, s*0.62);
+    c.stroke();
+    c.shadowBlur = 0;
 
-  if (!isMapView) {
-    var seats = [
-      {x:s*0.65,  y:-s*0.28},
-      {x:s*0.65,  y: s*0.22},
-      {x:-s*0.45, y:-s*0.28},
-      {x:-s*0.45, y: s*0.22}
-    ];
-    for (var fi = 0; fi < 4; fi++) {
-      stickFig(seats[fi].x, seats[fi].y, s*0.27, CREW[fi]);
+    // Stick figures in windows (always show all 4 chars)
+    if (showFigs) {
+      var figCols = ['#ff6b6b','#74b9ff','#55efc4','#fd79a8'];
+      var hairCols= [null, null, null, '#ffe066'];
+      // 3 windows for 4 chars: window 0=red, window 1=green+blue, window 2=pink
+      if (wi === 0) drawBusStickFig(c, wd.x + wd.w*0.5, -s*0.65, s*0.28, figCols[0], null);
+      if (wi === 1) drawBusStickFig(c, wd.x + wd.w*0.5, -s*0.65, s*0.28, figCols[1], null);
+      if (wi === 2) drawBusStickFig(c, wd.x + wd.w*0.35,-s*0.65, s*0.28, figCols[2], null);
+    } else if (!showFigs && isMapView && s > 1.0) {
+      // tiny dots for stick figs in map view
+      var figCols2 = ['#ff6b6b','#74b9ff','#55efc4','#fd79a8'];
+      c.beginPath();
+      c.arc(wd.x + wd.w*0.5, -s*0.55, s*0.12, 0, 6.2832);
+      c.fillStyle = figCols2[wi];
+      c.fill();
     }
   }
 
-  ctx.shadowBlur  = 10;
-  ctx.shadowColor = 'rgba(255,255,190,0.95)';
-  ctx.fillStyle   = 'rgba(255,255,190,0.95)';
-  ctx.fillRect(s*1.76, -s*0.58, s*0.11, s*0.26);
-  ctx.fillRect(s*1.76,  s*0.32, s*0.11, s*0.26);
-  ctx.shadowBlur = 0;
+  // Pink in cab window (4th character)
+  if (showFigs) {
+    c.strokeStyle = '#fd79a8'; c.shadowColor='#fd79a8'; c.shadowBlur=s*0.8; c.lineWidth=s*0.07;
+    c.beginPath(); c.rect(s*0.92, -s*1.02, s*0.65, s*0.55); c.stroke();
+    c.shadowBlur=0;
+    drawBusStickFig(c, s*1.25, -s*0.68, s*0.28, '#fd79a8', '#ffe066');
+  }
 
-  ctx.restore();
+  // ── VW BADGE on front ──
+  c.strokeStyle = '#ffffff';
+  c.shadowColor = '#ffffff';
+  c.shadowBlur  = s * 1.2;
+  c.lineWidth   = s * 0.08;
+  c.beginPath();
+  c.arc(s*1.75, -s*0.15, s*0.28, 0, 6.2832);
+  c.stroke();
+  // VW letters
+  c.fillStyle = '#ffffff';
+  c.font = (s*0.22) + 'px sans-serif';
+  c.textAlign = 'center';
+  c.fillText('VW', s*1.75, -s*0.09);
+  c.shadowBlur = 0;
+
+  // ── WHEELS ──
+  var wheels = [{cx:-s*1.5, cy:s*0.58},{cx:s*1.3, cy:s*0.58}];
+  for (var whi = 0; whi < 2; whi++) {
+    var wh = wheels[whi];
+    // Outer wheel
+    c.beginPath();
+    c.arc(wh.cx, wh.cy, s*0.52, 0, 6.2832);
+    c.strokeStyle = wheelCol;
+    c.shadowColor = wheelCol;
+    c.shadowBlur  = s * 2.0;
+    c.lineWidth   = s * 0.13;
+    c.stroke();
+    // Inner hub
+    c.beginPath();
+    c.arc(wh.cx, wh.cy, s*0.28, 0, 6.2832);
+    c.strokeStyle = '#ffffff';
+    c.shadowColor = '#ffffff';
+    c.shadowBlur  = s * 1.0;
+    c.lineWidth   = s * 0.07;
+    c.stroke();
+    // VW on wheel
+    c.fillStyle = '#ffffff';
+    c.font = (s*0.18) + 'px sans-serif';
+    c.textAlign = 'center';
+    c.fillText('VW', wh.cx, wh.cy + s*0.07);
+    // Spokes
+    for (var sp2 = 0; sp2 < 6; sp2++) {
+      var ang = sp2 * (6.2832/6);
+      c.beginPath();
+      c.moveTo(wh.cx + Math.cos(ang)*s*0.28, wh.cy + Math.sin(ang)*s*0.28);
+      c.lineTo(wh.cx + Math.cos(ang)*s*0.50, wh.cy + Math.sin(ang)*s*0.50);
+      c.strokeStyle = wheelCol;
+      c.shadowBlur = 0;
+      c.lineWidth = s*0.05;
+      c.stroke();
+    }
+    c.shadowBlur = 0;
+  }
+
+  // ── HEADLIGHT ──
+  c.beginPath();
+  c.arc(s*2.18, s*0.12, s*0.18, 0, 6.2832);
+  c.strokeStyle = '#ffffc0';
+  c.shadowColor = '#ffffc0';
+  c.shadowBlur  = s * 2.5;
+  c.lineWidth   = s * 0.09;
+  c.stroke();
+  c.shadowBlur = 0;
+
+  // ── REAR ACCENT ──
+  c.strokeStyle = accentCol;
+  c.shadowColor = accentCol;
+  c.shadowBlur  = s * 1.2;
+  c.lineWidth   = s * 0.08;
+  c.beginPath();
+  c.moveTo(-s*2.85, -s*0.1);
+  c.lineTo(-s*2.5,  -s*0.1);
+  c.lineTo(-s*2.5,   s*0.4);
+  c.stroke();
+  c.shadowBlur = 0;
+
+  c.lineCap = 'butt';
+  c.lineJoin = 'miter';
+}
+
+function drawBusStickFig(c, x, y, sz, col, hairCol) {
+  c.strokeStyle = col; c.fillStyle = col;
+  c.lineWidth = sz * 0.35; c.lineCap = 'round';
+  c.shadowBlur = sz*3; c.shadowColor = col;
+  // Head
+  c.beginPath(); c.arc(x, y - sz*0.9, sz*0.38, 0, 6.2832); c.stroke();
+  // Smile
+  c.beginPath(); c.arc(x, y - sz*0.88, sz*0.18, 0.2, 2.9); c.stroke();
+  // Hair
+  if (hairCol) {
+    c.strokeStyle = hairCol; c.shadowColor = hairCol; c.lineWidth = sz*0.3;
+    c.beginPath(); c.arc(x, y-sz*0.9, sz*0.42, 3.4, 6.0); c.stroke();
+    c.strokeStyle = col; c.shadowColor = col; c.lineWidth = sz*0.35;
+  }
+  // Body
+  c.beginPath(); c.moveTo(x, y-sz*0.5); c.lineTo(x, y+sz*0.1); c.stroke();
+  // Arms
+  c.beginPath();
+  c.moveTo(x-sz*0.4, y-sz*0.25); c.lineTo(x+sz*0.4, y-sz*0.25); c.stroke();
+  c.shadowBlur = 0; c.lineCap = 'butt';
 }
 
 function stickFig(x, y, sz, col) {
