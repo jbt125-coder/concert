@@ -59,7 +59,7 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 .volSlider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#ff2d78;cursor:pointer;}
 
 /* Title screen */
-#titleScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000010;z-index:101;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:pointer;}
+#titleScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:101;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:pointer;}
 #titleScreen canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
 #titleTapHint{font-family:‘Orbitron’,monospace;font-size:11px;letter-spacing:4px;color:rgba(255,240,31,0.7);margin-top:40px;animation:blink 1.4s ease-in-out infinite;}
 @keyframes blink{0%,100%{opacity:0.3;}50%{opacity:1;}}
@@ -276,6 +276,51 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 </div>
 
 <!-- Game over screen -->
+
+<div class="screen hidden" id="goScreen">
+  <div style="font-family:'Orbitron',monospace;font-size:clamp(28px,7vw,52px);font-weight:900;letter-spacing:4px;transform:skewX(-4deg);margin-bottom:10px;background:linear-gradient(135deg,#ff2d78,#fff01f,#bf5fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(255,45,120,0.8));text-align:center;">CONCERT QUEST</div>
+  <div class="go-h" style="color:#ff2d78;text-shadow:0 0 40px rgba(255,45,120,0.6);">BROKE DOWN</div>
+  <div class="go-sub">Ran out of cash before hitting all the shows.<br>Shows attended: <span id="goCnt">0</span>/10</div>
+  <button class="big-btn pink" onclick="location.reload()">TRY AGAIN</button>
+</div>
+
+<!-- Broke pull-over popup -->
+
+<div class="popup-overlay" id="brokePop">
+  <div class="popup-card" style="border:1px solid rgba(255,240,31,0.6);">
+    <div class="popup-title" style="color:#fff01f;text-shadow:0 0 10px rgba(255,240,31,0.7);">💸 BROKE DOWN!</div>
+    <div class="popup-sub">The crew is out of cash. Time to earn some!</div>
+    <div class="popup-btns">
+      <button class="pop-btn" style="border:1px solid rgba(57,255,20,0.6);color:#39ff14;" onclick="brokeDoJob()">🖌️ ODD JOB: PAINT OVER GRAFFITI <span class="amt">+$100</span></button>
+      <button class="pop-btn skip" onclick="location.reload()">✕ GIVE UP &amp; TRY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- Graffiti mini-game -->
+
+<div id="graffitiGame" style="display:none;position:fixed;inset:0;background:#111;z-index:90;flex-direction:column;">
+  <div style="flex-shrink:0;padding:12px 16px;background:#000;border-bottom:1px solid rgba(57,255,20,0.4);display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:'Orbitron',sans-serif;font-size:10px;color:#39ff14;letter-spacing:2px;">🖌️ ODD JOB — PAINT OVER THE GRAFFITI</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.5);">Cover it white to get paid <span style="color:#fff01f;font-weight:bold;">$100</span></div>
+  </div>
+  <div style="flex-shrink:0;padding:8px 16px;background:#0a0a0a;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;">
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:1px;">COVERED:</div>
+    <div style="flex:1;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+      <div id="gfProgressBar" style="height:100%;width:0%;background:#39ff14;border-radius:4px;transition:width 0.1s;box-shadow:0 0 8px #39ff14;"></div>
+    </div>
+    <div id="gfPct" style="font-family:'Orbitron',sans-serif;font-size:11px;color:#39ff14;min-width:36px;">0%</div>
+  </div>
+  <canvas id="gfCanvas" style="flex:1;display:block;touch-action:none;cursor:crosshair;"></canvas>
+  <div id="gfDone" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px;">
+    <div style="font-size:48px;">💵</div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:#39ff14;text-shadow:0 0 20px #39ff14;">GREAT WORK!</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.7);">The business paid you <span style="color:#fff01f;font-weight:bold;">$100</span>!</div>
+    <button onclick="graffitiFinish()" style="background:#39ff14;border:none;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:3px;color:#000;padding:14px 32px;border-radius:4px;cursor:pointer;box-shadow:0 0 16px #39ff14;margin-top:8px;">BACK TO ROAD TRIP</button>
+  </div>
+</div>
+
+<!-- Game over screen (true fail) -->
 
 <div class="screen hidden" id="goScreen">
   <div style="font-family:'Orbitron',monospace;font-size:clamp(28px,7vw,52px);font-weight:900;letter-spacing:4px;transform:skewX(-4deg);margin-bottom:10px;background:linear-gradient(135deg,#ff2d78,#fff01f,#bf5fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(255,45,120,0.8));text-align:center;">CONCERT QUEST</div>
@@ -631,18 +676,18 @@ function updateBus(dt){
   bus.trail.push({x:bus.x,y:bus.y});
   if(bus.trail.length>28)bus.trail.shift();
 
-  // Miles + gas
+  // Miles + gas (slow drain)
   miles+=spd*0.004*(dt/16);
   if(spd>0.5){
-    gasDrainAcc+=spd*0.002*(dt/16);
+    gasDrainAcc+=spd*0.00025*(dt/16);
     if(gasDrainAcc>=1){gasDrainAcc=0;gasLevel=Math.max(0,gasLevel-1);}
   }
-  if(gasLevel<=0){gameOver();return;}
+  if(gasLevel<=0){gasLevel=5;showAlert('⛽ FOUND A GAS STATION!',2500);}
 
   // Random events
   var now=Date.now();
   if(now-lastEvent>nextEventDelay&&!popOpen){
-    lastEvent=now;nextEventDelay=22000+Math.random()*18000;
+    lastEvent=now;nextEventDelay=45000+Math.random()*35000;
     randomEvent();
   }
 
@@ -676,14 +721,15 @@ function hexRGB(h){try{var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),1
 ═══════════════════════════════════════════════════════════ */
 function randomEvent(){
   var roll=Math.random();
-  if(roll<0.20){money=Math.max(0,money-75);showAlert('🚔 SPEEDING TICKET! -$75','3000');spawnParts(bus.x,bus.y,10,['#ff2d78','#fff'],3);}
-  else if(roll<0.38){money=Math.max(0,money-45);showAlert('🔧 FLAT TIRE! -$45',3000);spawnParts(bus.x,bus.y,8,['#bf5fff','#fff'],2);}
-  else if(roll<0.52){money=Math.max(0,money-12);showAlert('🍔 HUNGRY CREW! -$12',3000);}
-  else if(roll<0.64){gasLevel=Math.min(gasMax,gasLevel+2);showAlert('⛽ FREE GAS! FILLED UP!',3000);spawnParts(bus.x,bus.y,14,['#39ff14','#fff'],4);}
-  else if(roll<0.80){money+=20;showAlert('💵 FOUND $20 ON THE ROAD!',3000);spawnParts(bus.x,bus.y,12,['#fff01f','#39ff14'],3.5);}
-  else{money+=50;showAlert('🎉 BUSKING SESSION! +$50',3000);spawnParts(bus.x,bus.y,18,['#ff2d78','#00f5ff','#fff01f'],5);}
+  if(roll<0.12){money=Math.max(0,money-30);showAlert('🚔 SPEEDING TICKET! -$30',3000);spawnParts(bus.x,bus.y,10,['#ff2d78','#fff'],3);}
+  else if(roll<0.22){money=Math.max(0,money-20);showAlert('🔧 FLAT TIRE FIXED! -$20',3000);spawnParts(bus.x,bus.y,8,['#bf5fff','#fff'],2);}
+  else if(roll<0.32){money=Math.max(0,money-8);showAlert('🍔 HUNGRY CREW! -$8',3000);}
+  else if(roll<0.48){gasLevel=Math.min(gasMax,gasLevel+3);showAlert('⛽ FREE GAS! FILLED UP!',3000);spawnParts(bus.x,bus.y,14,['#39ff14','#fff'],4);}
+  else if(roll<0.65){money+=40;showAlert('💵 FOUND $40 ON THE ROAD!',3000);spawnParts(bus.x,bus.y,12,['#fff01f','#39ff14'],3.5);}
+  else if(roll<0.80){money+=80;showAlert('🎉 BUSKING SESSION! +$80',3000);spawnParts(bus.x,bus.y,18,['#ff2d78','#00f5ff','#fff01f'],5);}
+  else{money+=60;showAlert('🎸 STREET PERFORMANCE! +$60',3000);spawnParts(bus.x,bus.y,15,['#39ff14','#fff01f'],4);}
   updateHUD();
-  if(money<=0){gameOver();}
+  if(money<=0){brokePullOver();}
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -723,7 +769,19 @@ function openCity(name){
   document.getElementById('merchAmt').textContent='+$'+cityMerchAmt;
   document.getElementById('cityPop').classList.add('show');
 }
-function doJob(){money+=cityJobAmt;showAlert('ODD JOB DONE! +$'+cityJobAmt,2500);spawnParts(bus.x,bus.y,10,['#39ff14','#fff'],3.5);closeCity();}
+function doJob(){
+  document.getElementById('cityPop').classList.remove('show');
+  popOpen=true;
+  launchGraffitiGame(false);
+}
+function brokePullOver(){
+  gameActive=false;
+  document.getElementById('brokePop').classList.add('show');
+}
+function brokeDoJob(){
+  document.getElementById('brokePop').classList.remove('show');
+  launchGraffitiGame(true);
+}
 function doMerch(){money+=cityMerchAmt;showAlert('MERCH SOLD! +$'+cityMerchAmt,2500);spawnParts(bus.x,bus.y,10,['#00f5ff','#fff'],3.5);closeCity();}
 function doCamp(){money-=15;showAlert('CAMPED FOR THE NIGHT. -$15',2500);closeCity();}
 function doFood(){money-=12;showAlert('CREW FED! -$12',2500);closeCity();}
@@ -736,7 +794,7 @@ function closeCity(){
   bus.x=Math.max(80,Math.min(WW-80,bus.x));
   bus.y=Math.max(80,Math.min(WH-80,bus.y));
   updateHUD();
-  if(money<=0){gameOver();return;}
+  if(money<=0){brokePullOver();return;}
   setTimeout(function(){nearCityName='';},4000);
 }
 
@@ -992,7 +1050,7 @@ function drawGameTitle(){
   ctx.shadowColor='rgba(255,45,120,0.7)';ctx.shadowBlur=28;
   var grd=ctx.createLinearGradient(-180,0,180,0);
   grd.addColorStop(0,'#ff2d78');grd.addColorStop(0.4,'#fff01f');grd.addColorStop(0.7,'#39ff14');grd.addColorStop(1,'#ff2d78');
-  ctx.font='bold clamp(18px,4vw,32px) Orbitron,monospace';
+  ctx.font='bold '+Math.min(Math.max(18,VW*0.04),32)+'px Orbitron,monospace';
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=grd;
   ctx.fillText('CONCERT QUEST',0,0);
   var sg=ctx.createLinearGradient(-200+titleShine*500,0,-120+titleShine*500+180,0);
@@ -1178,22 +1236,19 @@ document.getElementById('ytPlay').addEventListener('click',function(){
   for(var i=0;i<240;i++) stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.5+0.3,a:Math.random()*0.5+0.4,tw:Math.random()*Math.PI*2,ts:Math.random()*0.003+0.0005});
   function drawTitle(){
     var w=tc.width,h=tc.height;
-    tx.clearRect(0,0,w,h);
+    tx.fillStyle='#000';tx.fillRect(0,0,w,h);
     for(var i=0;i<stars.length;i++){
       var s=stars[i];s.tw+=s.ts;
       tx.beginPath();tx.arc(s.x*w,s.y*h,s.r,0,Math.PI*2);
       tx.fillStyle='rgba(255,255,255,'+(s.a*(0.6+0.4*Math.sin(s.tw)))+')';tx.fill();
     }
-    var pg=tx.createRadialGradient(w*0.5,h*0.62,0,w*0.5,h*0.62,w*0.38);
-    pg.addColorStop(0,'rgba(255,45,120,0.12)');pg.addColorStop(0.5,'rgba(0,0,0,0.05)');pg.addColorStop(1,'rgba(0,0,0,0)');
-    tx.fillStyle=pg;tx.fillRect(0,0,w,h);
     tx.save();tx.translate(w/2,h*0.38);tx.rotate(-0.05);
     var fs=Math.min(w*0.13,h*0.10,60);var lineGap=fs*1.15;var lines=['CONCERT','QUEST'];
     tx.textAlign='center';tx.textBaseline='middle';
     for(var li=0;li<lines.length;li++){
       var ly=(li-(lines.length-1)/2)*lineGap;
       tx.font='900 '+fs+'px Orbitron,monospace';
-      tx.shadowColor='rgba(255,45,120,0.9)';tx.shadowBlur=44;
+      tx.shadowColor='rgba(255,45,120,0.85)';tx.shadowBlur=20;
       tx.fillStyle='rgba(200,0,80,0.2)';tx.fillText(lines[li],2,ly+2);
       tx.shadowColor='rgba(255,240,31,0.6)';tx.shadowBlur=28;
       var grd=tx.createLinearGradient(-w*0.3,-fs*0.5,w*0.3,fs*0.5);
@@ -1263,6 +1318,151 @@ function startGame(){
   CAM.x=bus.x;CAM.y=bus.y;CAM.zoom=0.7;targetZoom=0.7;manualZoom=0.7;
   updateHUD();
   gameActive=true;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GRAFFITI MINI-GAME
+═══════════════════════════════════════════════════════════ */
+var GF={canvas:null,ctx:null,painting:false,lastX:0,lastY:0,coveredPixels:0,totalPixels:0,fromBroke:false,checkTimer:0};
+var GRAFFITI_COLORS=['#ff2d78','#bf5fff','#ff6b1a','#fff01f','#00f5ff','#39ff14'];
+var GRAFFITI_WORDS=['NEON','RAGE','SQUAD','VIBE','PUNK','ZONE','BZZZ','BYTE'];
+
+function launchGraffitiGame(fromBroke){
+  GF.fromBroke=fromBroke;
+  GF.painting=false;GF.coveredPixels=0;GF.totalPixels=0;GF.checkTimer=0;
+  var el=document.getElementById('graffitiGame');
+  el.style.display='flex';
+  document.getElementById('gfDone').style.display='none';
+  document.getElementById('gfProgressBar').style.width='0%';
+  document.getElementById('gfPct').textContent='0%';
+  GF.canvas=document.getElementById('gfCanvas');
+  GF.ctx=GF.canvas.getContext('2d');
+  GF.canvas.width=window.innerWidth;
+  var headerH=44+38;
+  GF.canvas.height=window.innerHeight-headerH;
+  drawGraffitiWall();
+  setupGraffitiInput();
+}
+
+function drawGraffitiWall(){
+  var c=GF.ctx,W=GF.canvas.width,H=GF.canvas.height;
+  // Brick wall background
+  c.fillStyle='#2a1a10';c.fillRect(0,0,W,H);
+  c.strokeStyle='rgba(0,0,0,0.5)';c.lineWidth=2;
+  var brickH=28,brickW=60;
+  for(var row=0;row<Math.ceil(H/brickH)+1;row++){
+    var offset=(row%2===0)?0:brickW/2;
+    c.fillStyle=row%3===0?'#2e1c11':'#341f12';
+    for(var col=-1;col<Math.ceil(W/brickW)+2;col++){
+      var bx=col*brickW+offset,by=row*brickH;
+      c.fillRect(bx,by,brickW-2,brickH-2);
+      c.strokeRect(bx,by,brickW-2,brickH-2);
+    }
+  }
+  // Spray paint graffiti tags (colorful)
+  var tags=[
+    {x:W*0.12,y:H*0.25,rot:-0.2,scale:1.1},
+    {x:W*0.42,y:H*0.18,rot:0.1,scale:1.4},
+    {x:W*0.72,y:H*0.30,rot:-0.1,scale:1.0},
+    {x:W*0.22,y:H*0.62,rot:0.15,scale:1.2},
+    {x:W*0.58,y:H*0.68,rot:-0.05,scale:0.9},
+    {x:W*0.85,y:H*0.60,rot:0.2,scale:1.0}
+  ];
+  tags.forEach(function(t,i){
+    c.save();c.translate(t.x,t.y);c.rotate(t.rot);c.scale(t.scale,t.scale);
+    var col=GRAFFITI_COLORS[i%GRAFFITI_COLORS.length];
+    var word=GRAFFITI_WORDS[i%GRAFFITI_WORDS.length];
+    var fs=32+Math.random()*20;
+    c.font='bold '+fs+'px Arial,sans-serif';
+    c.shadowBlur=18;c.shadowColor=col;
+    // Outline
+    c.strokeStyle='rgba(0,0,0,0.8)';c.lineWidth=5;c.strokeText(word,0,0);
+    // Fill
+    c.fillStyle=col;c.fillText(word,0,0);
+    // Second word below
+    var word2=GRAFFITI_WORDS[(i+3)%GRAFFITI_WORDS.length];
+    c.font='bold '+(fs*0.7)+'px Arial,sans-serif';
+    c.strokeText(word2,fs*0.2,fs*0.9);c.fillText(word2,fs*0.2,fs*0.9);
+    c.shadowBlur=0;c.restore();
+  });
+  // Big arrow
+  c.save();c.translate(W*0.5,H*0.48);
+  c.fillStyle='#ff2d78';c.shadowBlur=20;c.shadowColor='#ff2d78';
+  c.font='bold 48px Arial';c.textAlign='center';c.fillText('→ CREW WUZ HERE ←',0,0);
+  c.shadowBlur=0;c.restore();
+  // Store count of non-white pixels for coverage tracking
+  GF.totalPixels=W*H;
+  GF.coveredPixels=0;
+}
+
+function setupGraffitiInput(){
+  var c=GF.canvas;
+  function startPaint(x,y){GF.painting=true;GF.lastX=x;GF.lastY=y;paintAt(x,y);}
+  function movePaint(x,y){if(!GF.painting)return;paintLine(GF.lastX,GF.lastY,x,y);GF.lastX=x;GF.lastY=y;}
+  function endPaint(){GF.painting=false;}
+  // Mouse
+  c.addEventListener('mousedown',function(e){var r=c.getBoundingClientRect();startPaint(e.clientX-r.left,e.clientY-r.top);});
+  c.addEventListener('mousemove',function(e){var r=c.getBoundingClientRect();movePaint(e.clientX-r.left,e.clientY-r.top);});
+  c.addEventListener('mouseup',endPaint);
+  c.addEventListener('mouseleave',endPaint);
+  // Touch
+  c.addEventListener('touchstart',function(e){e.preventDefault();var r=c.getBoundingClientRect();var t=e.touches[0];startPaint(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+  c.addEventListener('touchmove',function(e){e.preventDefault();var r=c.getBoundingClientRect();var t=e.touches[0];movePaint(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+  c.addEventListener('touchend',endPaint);
+}
+
+function paintAt(x,y){
+  var c=GF.ctx;
+  c.beginPath();c.arc(x,y,22,0,Math.PI*2);
+  c.fillStyle='rgba(245,240,230,1)';c.fill();
+  updateGraffitiProgress();
+}
+function paintLine(x1,y1,x2,y2){
+  var c=GF.ctx;
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
+  c.strokeStyle='rgba(245,240,230,1)';c.lineWidth=44;c.lineCap='round';c.lineJoin='round';c.stroke();
+  updateGraffitiProgress();
+}
+
+function updateGraffitiProgress(){
+  GF.checkTimer++;
+  if(GF.checkTimer%8!==0)return; // sample every 8 strokes
+  var c=GF.ctx,W=GF.canvas.width,H=GF.canvas.height;
+  // Sample a grid of pixels to estimate coverage (fast)
+  var step=12,covered=0,total=0;
+  var data=c.getImageData(0,0,W,H).data;
+  for(var y=0;y<H;y+=step){
+    for(var x=0;x<W;x+=step){
+      var idx=(y*W+x)*4;
+      // Count pixels that are close to white (painted over)
+      if(data[idx]>200&&data[idx+1]>200&&data[idx+2]>200)covered++;
+      total++;
+    }
+  }
+  var pct=Math.min(100,Math.round((covered/total)*100));
+  document.getElementById('gfProgressBar').style.width=pct+'%';
+  document.getElementById('gfPct').textContent=pct+'%';
+  if(pct>=85){
+    setTimeout(function(){
+      document.getElementById('gfDone').style.display='flex';
+    },200);
+  }
+}
+
+function graffitiFinish(){
+  document.getElementById('graffitiGame').style.display='none';
+  document.getElementById('gfDone').style.display='none';
+  money+=100;
+  showAlert('PAINTING DONE! +$100',3000);
+  spawnParts(bus.x,bus.y,20,['#39ff14','#fff01f','#fff'],5);
+  updateHUD();
+  if(GF.fromBroke){
+    gameActive=true;
+    popOpen=false;
+    setTimeout(function(){nearCityName='';},1000);
+  } else {
+    closeCity();
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
