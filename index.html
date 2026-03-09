@@ -198,11 +198,11 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
 <!-- Cog menu -->
 
 <div id="cogMenuOverlay">
-  <div id="cogCard">
+  <div id="cogCard" style="max-height:88vh;overflow-y:auto;">
     <button id="closeCog">✕</button>
     <h2>⚙ SETTINGS</h2>
     <div class="cogSection">
-      <label>MUSIC — YOUTUBE LINK</label>
+      <label>ROAD TRIP MUSIC — YOUTUBE LINK</label>
       <input id="ytInput" type="text" value="https://youtube.com/playlist?list=PLtyioGn0RusztTJWp9ZBvtz3rkdMZG7kM">
       <div class="cogRow">
         <button class="cogBtn" id="ytPlay">▶ PLAY</button>
@@ -210,6 +210,11 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
       </div>
       <div id="musicStatus">No music loaded</div>
       <div class="volRow"><span>MUSIC VOL</span><input type="range" class="volSlider" id="musicVol" min="0" max="100" value="70"></div>
+    </div>
+    <div class="cogSection">
+      <label>🎸 CONCERT JUMBOTRONS — YOUTUBE VIDEOS</label>
+      <div style="font-size:8px;color:rgba(255,255,255,0.35);margin-bottom:10px;line-height:1.6;">Each concert plays on the big screen during the show. Paste any YouTube video or playlist URL.</div>
+      <div id="concertYtList"></div>
     </div>
   </div>
 </div>
@@ -374,6 +379,10 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
     <div class="cg-hi"><span class="cg-hv" id="cgPlayingAs" style="color:#39ff14;font-size:9px;"></span></div>
   </div>
   <canvas id="cgCanvas"></canvas>
+  <!-- Jumbotron YouTube iframe — positioned over canvas in the stage area -->
+  <div id="cgJumbotron" style="position:absolute;top:44px;left:50%;transform:translateX(-50%);width:min(52vw,300px);height:min(29.25vw,169px);border:3px solid rgba(255,240,31,0.8);border-radius:4px;box-shadow:0 0 28px rgba(255,240,31,0.5),0 0 8px rgba(0,0,0,1);z-index:5;overflow:hidden;pointer-events:none;background:#000;">
+    <div id="cgJumboPlayer"></div>
+  </div>
   <div id="cgControls">
     <div id="cgJoystick"><div id="cgStick"></div></div>
     <div id="cgInfo">
@@ -472,16 +481,16 @@ var btn={left:false,right:false,thrust:false};
 ═══════════════════════════════════════════════════════════ */
 // Venues (positions in 6400x6400 world matching US map layout)
 var VENUES=[
-  {name:"Red Rocks",       city:"Morrison, CO",      px:2048,py:2560, price:65,  artist:"The Midnight"},
-  {name:"Madison Sq Garden",city:"New York, NY",     px:5408,py:1536, price:120, artist:"Bruce Springsteen"},
-  {name:"Hollywood Bowl",  city:"Los Angeles, CA",   px:576, py:2880, price:85,  artist:"Fleetwood Mac"},
-  {name:"Ryman Auditorium",city:"Nashville, TN",     px:4224,py:2816, price:55,  artist:"Dolly Parton"},
-  {name:"The Fillmore",    city:"San Francisco, CA", px:448, py:2240, price:45,  artist:"Grateful Dead"},
-  {name:"Wrigley Field",   city:"Chicago, IL",       px:4032,py:1728, price:95,  artist:"Pearl Jam"},
-  {name:"Fenway Park",     city:"Boston, MA",        px:5600,py:1216, price:110, artist:"Aerosmith"},
-  {name:"Gorge Amphitheatre",city:"George, WA",      px:704, py:960,  price:70,  artist:"Dave Matthews Band"},
-  {name:"Moody Center",    city:"Austin, TX",        px:2688,py:4096, price:75,  artist:"Willie Nelson"},
-  {name:"Kaseya Center",   city:"Miami, FL",         px:4672,py:4736, price:100, artist:"Bad Bunny"}
+  {name:"Red Rocks",       city:"Morrison, CO",      px:2048,py:2560, price:65,  artist:"The Midnight",        ytUrl:"https://www.youtube.com/watch?v=8It-MpTJ8sM"},
+  {name:"Madison Sq Garden",city:"New York, NY",     px:5408,py:1536, price:120, artist:"Bruce Springsteen",   ytUrl:"https://www.youtube.com/watch?v=1e4gMFKdOVs"},
+  {name:"Hollywood Bowl",  city:"Los Angeles, CA",   px:576, py:2880, price:85,  artist:"Fleetwood Mac",       ytUrl:"https://www.youtube.com/watch?v=Zj1SSMA3z-c"},
+  {name:"Ryman Auditorium",city:"Nashville, TN",     px:4224,py:2816, price:55,  artist:"Dolly Parton",        ytUrl:"https://www.youtube.com/watch?v=RgljMFUjmFE"},
+  {name:"The Fillmore",    city:"San Francisco, CA", px:448, py:2240, price:45,  artist:"Grateful Dead",       ytUrl:"https://www.youtube.com/watch?v=B-xUGJ3_k8I"},
+  {name:"Wrigley Field",   city:"Chicago, IL",       px:4032,py:1728, price:95,  artist:"Pearl Jam",           ytUrl:"https://www.youtube.com/watch?v=sBvOq7AHSmA"},
+  {name:"Fenway Park",     city:"Boston, MA",        px:5600,py:1216, price:110, artist:"Aerosmith",           ytUrl:"https://www.youtube.com/watch?v=0gAFf0LZCXY"},
+  {name:"Gorge Amphitheatre",city:"George, WA",      px:704, py:960,  price:70,  artist:"Dave Matthews Band",  ytUrl:"https://www.youtube.com/watch?v=y4U3oIaLCnU"},
+  {name:"Moody Center",    city:"Austin, TX",        px:2688,py:4096, price:75,  artist:"Willie Nelson",       ytUrl:"https://www.youtube.com/watch?v=sNa6jLXNRwA"},
+  {name:"Kaseya Center",   city:"Miami, FL",         px:4672,py:4736, price:100, artist:"Bad Bunny",           ytUrl:"https://www.youtube.com/watch?v=drgrvnMopaM"}
 ];
 
 var CITIES=[
@@ -1204,7 +1213,7 @@ function ytExtract(url){
   try{var pl=url.match(/[?&]list=([A-Za-z0-9_-]+)/);if(pl)return{type:'playlist',id:pl[1]};var v=url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);if(v)return{type:'video',id:v[1]};}catch(e){}return null;
 }
 
-document.getElementById('cogBtn').addEventListener('click',function(){document.getElementById('cogMenuOverlay').classList.add('show');});
+document.getElementById('cogBtn').addEventListener('click',function(){document.getElementById('cogMenuOverlay').classList.add('show');buildConcertYtList();});
 document.getElementById('closeCog').addEventListener('click',function(){document.getElementById('cogMenuOverlay').classList.remove('show');});
 document.getElementById('cogMenuOverlay').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
 document.getElementById('ytStop').addEventListener('click',function(){if(ytPlayer&&ytPlayer.pauseVideo){ytPlayer.pauseVideo();ytPlayer.mute();}document.getElementById('musicStatus').textContent='■ Stopped';});
@@ -1466,7 +1475,65 @@ function graffitiFinish(){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CONCERT MINI-GAME (unchanged from previous version)
+   JUMBOTRON YOUTUBE PLAYER
+═══════════════════════════════════════════════════════════ */
+var jumboPlayer=null,jumboReady=false;
+
+function loadJumboPlayer(url){
+  // Destroy old player if any
+  if(jumboPlayer){try{jumboPlayer.destroy();}catch(e){}jumboPlayer=null;}
+  var container=document.getElementById('cgJumboPlayer');
+  container.innerHTML='';
+  var div=document.createElement('div');div.id='cgJumboInner';container.appendChild(div);
+  var info=ytExtract(url);
+  if(!info)return;
+  var pvars={autoplay:1,playsinline:1,controls:0,mute:0,rel:0,modestbranding:1,origin:window.location.origin};
+  var vidId=undefined;
+  if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
+  else{vidId=info.id;pvars.loop=1;pvars.playlist=info.id;}
+  var cfg={width:'100%',height:'100%',playerVars:pvars,events:{
+    onReady:function(e){jumboReady=true;e.target.setVolume(Math.round(musicVolume*100));if(audioUnlocked){e.target.unMute();e.target.playVideo();}},
+    onStateChange:function(e){if(e.data===YT.PlayerState.ENDED)e.target.playVideo();}
+  }};
+  if(vidId)cfg.videoId=vidId;
+  try{jumboPlayer=new YT.Player('cgJumboInner',cfg);}catch(err){}
+}
+
+function stopJumboPlayer(){
+  if(jumboPlayer){try{jumboPlayer.stopVideo();jumboPlayer.destroy();}catch(e){}jumboPlayer=null;}
+  var container=document.getElementById('cgJumboPlayer');
+  if(container)container.innerHTML='';
+  jumboReady=false;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COG MENU — CONCERT YOUTUBE LIST
+═══════════════════════════════════════════════════════════ */
+function buildConcertYtList(){
+  var el=document.getElementById('concertYtList');if(!el)return;
+  el.innerHTML='';
+  for(var i=0;i<VENUES.length;i++){
+    (function(idx){
+      var v=VENUES[idx];
+      var row=document.createElement('div');
+      row.style.cssText='margin-bottom:10px;border:1px solid rgba(255,45,120,0.18);border-radius:6px;padding:8px 10px;';
+      var lbl=document.createElement('div');
+      lbl.style.cssText='font-size:9px;color:#ff2d78;letter-spacing:1px;margin-bottom:4px;';
+      lbl.textContent=v.name+' — '+v.artist;
+      var inp=document.createElement('input');
+      inp.type='text';inp.value=v.ytUrl||'';
+      inp.placeholder='YouTube URL or playlist...';
+      inp.style.cssText='width:100%;background:rgba(0,5,18,0.95);border:1px solid rgba(255,45,120,0.2);border-radius:4px;color:#ff2d78;font-size:8px;padding:5px 7px;font-family:inherit;outline:none;';
+      inp.addEventListener('change',function(){VENUES[idx].ytUrl=this.value.trim();});
+      inp.addEventListener('blur',function(){VENUES[idx].ytUrl=this.value.trim();});
+      row.appendChild(lbl);row.appendChild(inp);
+      el.appendChild(row);
+    })(i);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONCERT MINI-GAME
 ═══════════════════════════════════════════════════════════ */
 var CG={
   venueIdx:-1,canvas:null,ctx:null,CW:0,CH:0,running:false,rafId:null,lastT:0,
@@ -1487,9 +1554,13 @@ function launchConcertGame(vIdx){
   var v=VENUES[vIdx];
   document.getElementById('cgVenueName').textContent=v.name.toUpperCase();
   document.getElementById('cgArtistName').textContent=v.artist;
+  // Load jumbotron video for this venue
+  if(v.ytUrl&&typeof YT!=='undefined'&&YT.Player){loadJumboPlayer(v.ytUrl);}
+  // Mute road trip music while at concert
+  if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(10);
   setupCgJoystick();showCharPicker();
 }
-function cgResize(){var hd=document.getElementById('cgHud'),ct=document.getElementById('cgControls');CG.CW=CG.canvas.width=window.innerWidth;CG.CH=CG.canvas.height=window.innerHeight-(hd?hd.offsetHeight:44)-(ct?ct.offsetHeight:140);CG.frontRowY=CG.CH*0.22;}
+function cgResize(){var hd=document.getElementById('cgHud'),ct=document.getElementById('cgControls');CG.CW=CG.canvas.width=window.innerWidth;CG.CH=CG.canvas.height=window.innerHeight-(hd?hd.offsetHeight:44)-(ct?ct.offsetHeight:140);CG.frontRowY=CG.CH*0.36;}
 function showCharPicker(){
   CG.running=false;if(CG.rafId)cancelAnimationFrame(CG.rafId);
   var picker=document.getElementById('cgCharPicker'),grid=document.getElementById('charGrid');grid.innerHTML='';
@@ -1552,9 +1623,9 @@ function cgHitPlayer(msg,hx,hy){CG.lives--;CG.player.stunTimer=1200;CG.player.y=
 function updateCgHud(){var h='';for(var i=0;i<3;i++)h+=(i<CG.lives?'♥':'♡');document.getElementById('cgLives').textContent=h;document.getElementById('cgBonus').textContent='$'+CG.bonusCash;document.getElementById('cgCharsLeft').textContent=''+(4-CG.charsUsed.length);}
 function cgReachFrontRow(){CG.running=false;if(CG.rafId)cancelAnimationFrame(CG.rafId);document.getElementById('frBonus').textContent=CG.bonusCash;document.getElementById('cgFrontRow').classList.remove('hidden');}
 function cgStayAndListen(){document.getElementById('cgFrontRow').classList.add('hidden');CG.running=false;document.getElementById('cgMsg').textContent='ENJOYING THE SHOW! TAP TO CONTINUE';cgDraw();document.getElementById('cgCanvas').addEventListener('click',cgContinueMap,{once:true});document.getElementById('cgCanvas').addEventListener('touchend',cgContinueMap,{once:true,passive:true});}
-function cgContinueMap(){document.getElementById('cgFrontRow').classList.add('hidden');document.getElementById('cgFail').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');window.removeEventListener('resize',cgResize);var vIdx=CG.venueIdx;attended[vIdx]=true;showsHit++;playlist.push(VENUES[vIdx].artist+' @ '+VENUES[vIdx].name);CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert(VENUES[vIdx].artist+' WAS INCREDIBLE! +$'+CG.bonusCash,3000);spawnParts(bus.x,bus.y,25,['#ff2d78','#fff01f','#39ff14'],6);if(showsHit>=10){setTimeout(winGame,1400);}}
+function cgContinueMap(){document.getElementById('cgFrontRow').classList.add('hidden');document.getElementById('cgFail').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(Math.round(musicVolume*100));var vIdx=CG.venueIdx;attended[vIdx]=true;showsHit++;playlist.push(VENUES[vIdx].artist+' @ '+VENUES[vIdx].name);CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert(VENUES[vIdx].artist+' WAS INCREDIBLE! +$'+CG.bonusCash,3000);spawnParts(bus.x,bus.y,25,['#ff2d78','#fff01f','#39ff14'],6);if(showsHit>=10){setTimeout(winGame,1400);}}
 function cgFailShow(){CG.running=false;if(CG.rafId)cancelAnimationFrame(CG.rafId);document.getElementById('cgFail').classList.remove('hidden');}
-function cgFailBack(){document.getElementById('cgFail').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');window.removeEventListener('resize',cgResize);CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert('KICKED OUT! Concert missed.',3000);}
+function cgFailBack(){document.getElementById('cgFail').classList.add('hidden');document.getElementById('cgCharPicker').classList.add('hidden');document.getElementById('concertGame').classList.add('hidden');window.removeEventListener('resize',cgResize);stopJumboPlayer();if(ytPlayer&&ytPlayer.setVolume)ytPlayer.setVolume(Math.round(musicVolume*100));CG.running=false;popOpen=false;bus.x+=Math.cos(bus.angle+Math.PI)*320;bus.y+=Math.sin(bus.angle+Math.PI)*320;updateHUD();showAlert('KICKED OUT! Concert missed.',3000);}
 function cgDraw(){
   var c=CG.ctx,W=CG.CW,H=CG.CH;if(!c||!W||!H)return;
   c.fillStyle='#030308';c.fillRect(0,0,W,H);
@@ -1577,9 +1648,45 @@ function cgDraw(){
   if(!pFlash){cgDrawStick(c,CG.player.x,CG.player.y,CG.player.col,CG.player.hairCol,0);c.fillStyle=CG.player.col;c.font='8px Orbitron,sans-serif';c.textAlign='center';c.shadowBlur=4;c.shadowColor=CG.player.col;c.fillText(CG.player.name,CG.player.x,CG.player.y-26);c.shadowBlur=0;}
 }
 function drawBandOnStage(c,W,stageH){
-  var bandY=stageH-28,positions=[W*0.2,W*0.37,W*0.57,W*0.74],instrCols=['#ff2d78','#00f5ff','#39ff14','#bf5fff'],instrNames=['GUITAR','BASS','KEYS','DRUMS'];
-  for(var i=0;i<4;i++){var bx=positions[i];cgDrawStick(c,bx,bandY,instrCols[i],null,Date.now()*0.002+i*1.5);c.fillStyle='rgba(255,255,255,0.4)';c.font='6px sans-serif';c.textAlign='center';c.fillText(instrNames[i],bx,bandY+22);}
-  c.strokeStyle='rgba(255,100,40,0.6)';c.lineWidth=3;c.shadowBlur=8;c.shadowColor='rgba(255,100,40,0.5)';c.beginPath();c.moveTo(0,stageH-2);c.lineTo(W,stageH-2);c.stroke();c.shadowBlur=0;
+  // Jumbotron screen frame on canvas (the iframe sits on top)
+  var jw=Math.min(W*0.52,300),jh=jw*0.5625;
+  var jx=(W-jw)/2,jy=4;
+  // Screen bezel
+  c.fillStyle='#111';c.fillRect(jx-8,jy-8,jw+16,jh+16);
+  c.strokeStyle='rgba(255,240,31,0.85)';c.lineWidth=3;
+  c.shadowBlur=22;c.shadowColor='rgba(255,240,31,0.7)';
+  c.strokeRect(jx-8,jy-8,jw+16,jh+16);c.shadowBlur=0;
+  // Screen label
+  c.fillStyle='rgba(255,240,31,0.7)';c.font='7px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('JUMBOTRON',W/2,jy+jh+22);
+  // Screen stands/poles
+  c.strokeStyle='rgba(180,160,100,0.5)';c.lineWidth=4;
+  c.beginPath();c.moveTo(jx+jw*0.2,jy+jh+8);c.lineTo(jx+jw*0.2,stageH-18);c.stroke();
+  c.beginPath();c.moveTo(jx+jw*0.8,jy+jh+8);c.lineTo(jx+jw*0.8,stageH-18);c.stroke();
+
+  // Speaker stacks (left & right)
+  var spkW=W*0.08,spkH=stageH*0.38;
+  [W*0.04, W*0.88].forEach(function(sx){
+    c.fillStyle='#1a1a1a';c.fillRect(sx,stageH-spkH-20,spkW,spkH);
+    c.strokeStyle='rgba(255,255,255,0.12)';c.lineWidth=1;c.strokeRect(sx,stageH-spkH-20,spkW,spkH);
+    // Speaker cones
+    for(var si=0;si<3;si++){c.beginPath();c.arc(sx+spkW/2,stageH-spkH+si*spkH*0.3,spkW*0.3,0,6.28);c.strokeStyle='rgba(255,255,255,0.2)';c.lineWidth=1.5;c.stroke();}
+  });
+
+  // Band — moved lower, in front of screen
+  var bandY=stageH-36;
+  var positions=[W*0.25,W*0.38,W*0.54,W*0.67];
+  var instrCols=['#ff2d78','#00f5ff','#39ff14','#bf5fff'];
+  var instrNames=['GUITAR','BASS','KEYS','DRUMS'];
+  for(var i=0;i<4;i++){
+    var bx=positions[i];
+    cgDrawStick(c,bx,bandY,instrCols[i],null,Date.now()*0.002+i*1.5);
+    c.fillStyle='rgba(255,255,255,0.45)';c.font='6px sans-serif';c.textAlign='center';
+    c.fillText(instrNames[i],bx,bandY+24);
+  }
+  // Stage edge glow
+  c.strokeStyle='rgba(255,100,40,0.7)';c.lineWidth=4;c.shadowBlur=10;c.shadowColor='rgba(255,100,40,0.6)';
+  c.beginPath();c.moveTo(0,stageH-2);c.lineTo(W,stageH-2);c.stroke();c.shadowBlur=0;
 }
 function cgDrawStick(c,x,y,col,hairCol,animT){
   var bob=Math.sin(animT*3)*2,armSwing=Math.sin(animT*3)*0.4,sz=13;
