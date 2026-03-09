@@ -413,8 +413,8 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
   </div>
   <canvas id="cgCanvas"></canvas>
   <!-- Jumbotron YouTube iframe — positioned over canvas in the stage area -->
-  <div id="cgJumbotron" style="position:absolute;top:44px;left:50%;transform:translateX(-50%);width:min(52vw,300px);height:min(29.25vw,169px);border:3px solid rgba(255,240,31,0.8);border-radius:4px;box-shadow:0 0 28px rgba(255,240,31,0.5),0 0 8px rgba(0,0,0,1);z-index:5;overflow:hidden;pointer-events:none;background:#000;">
-    <div id="cgJumboPlayer"></div>
+  <div id="cgJumbotron" style="position:absolute;top:44px;left:50%;transform:translateX(-50%);width:min(52vw,300px);height:min(29.25vw,169px);border:3px solid rgba(255,240,31,0.8);border-radius:4px;box-shadow:0 0 28px rgba(255,240,31,0.5),0 0 8px rgba(0,0,0,1);z-index:5;overflow:hidden;background:#000;">
+    <div id="cgJumboPlayer" style="width:100%;height:100%;"></div>
   </div>
   <div id="cgControls">
     <div id="cgJoystick"><div id="cgStick"></div></div>
@@ -2094,23 +2094,31 @@ function mgMerchUp(x,y){
 var jumboPlayer=null,jumboReady=false;
 
 function loadJumboPlayer(url){
-  // Destroy old player if any
   if(jumboPlayer){try{jumboPlayer.destroy();}catch(e){}jumboPlayer=null;}
   var container=document.getElementById('cgJumboPlayer');
   container.innerHTML='';
   var div=document.createElement('div');div.id='cgJumboInner';container.appendChild(div);
-  var info=ytExtract(url);
-  if(!info)return;
-  var pvars={autoplay:1,playsinline:1,controls:0,mute:0,rel:0,modestbranding:1,origin:window.location.origin};
+  var info=ytExtractGlobal(url);
+  if(!info){container.innerHTML='<div style="color:rgba(255,255,255,0.3);font-size:9px;padding:8px;text-align:center;">VIDEO</div>';return;}
+  // Must start muted for autoplay, then unmute on ready (browser policy)
+  var pvars={autoplay:1,playsinline:1,controls:1,mute:1,rel:0,modestbranding:1,origin:window.location.origin};
   var vidId=undefined;
   if(info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;}
   else{vidId=info.id;pvars.loop=1;pvars.playlist=info.id;}
   var cfg={width:'100%',height:'100%',playerVars:pvars,events:{
-    onReady:function(e){jumboReady=true;e.target.setVolume(Math.round(musicVolume*100));if(audioUnlocked){e.target.unMute();e.target.playVideo();}},
-    onStateChange:function(e){if(e.data===YT.PlayerState.ENDED)e.target.playVideo();}
+    onReady:function(e){
+      jumboReady=true;
+      e.target.setVolume(80);
+      e.target.playVideo();
+      // Unmute after brief delay — allows autoplay to start then unmutes
+      setTimeout(function(){try{e.target.unMute();e.target.setVolume(80);}catch(ex){}},800);
+    },
+    onStateChange:function(e){
+      if(e.data===YT.PlayerState.ENDED){e.target.playVideo();}
+    }
   }};
   if(vidId)cfg.videoId=vidId;
-  try{jumboPlayer=new YT.Player('cgJumboInner',cfg);}catch(err){}
+  try{jumboPlayer=new YT.Player('cgJumboInner',cfg);}catch(err){console.warn('Jumbo YT error:',err);}
 }
 
 function stopJumboPlayer(){
@@ -2162,14 +2170,15 @@ function launchConcertGame(vIdx){
   CG.venueIdx=vIdx;CG.lives=3;CG.charsUsed=[];CG.bonusCash=0;
   CG.crowd=[];CG.smokes=[];CG.bottles=[];CG.ball=null;
   CG.crowdTimer=0;CG.smokeTimer=0;CG.bottleTimer=0;CG.ballTimer=0;
+  // Show screen FIRST so iframe inits into visible DOM
   document.getElementById('concertGame').classList.remove('hidden');
   CG.canvas=document.getElementById('cgCanvas');CG.ctx=CG.canvas.getContext('2d');
   cgResize();window.addEventListener('resize',cgResize);
   var v=VENUES[vIdx];
   document.getElementById('cgVenueName').textContent=v.name.toUpperCase();
   document.getElementById('cgArtistName').textContent=v.artist;
-  // Load jumbotron video for this venue
-  if(v.ytUrl&&typeof YT!=='undefined'&&YT.Player){loadJumboPlayer(v.ytUrl);}
+  // Load jumbotron — small delay ensures layout is painted before YT iframe inits
+  if(v.ytUrl){setTimeout(function(){loadJumboPlayer(v.ytUrl);},200);}
   // Road trip music already paused at ticket screen
   setupCgJoystick();showCharPicker();
 }
