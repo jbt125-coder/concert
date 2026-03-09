@@ -296,32 +296,36 @@ body{background:#000;overflow:hidden;font-family:'Orbitron','Courier New',monosp
     <div class="popup-title" style="color:#fff01f;text-shadow:0 0 10px rgba(255,240,31,0.7);">💸 BROKE DOWN!</div>
     <div class="popup-sub">The crew is out of cash. Time to earn some!</div>
     <div class="popup-btns">
-      <button class="pop-btn" style="border:1px solid rgba(57,255,20,0.6);color:#39ff14;" onclick="brokeDoJob()">🖌️ ODD JOB: PAINT OVER GRAFFITI <span class="amt">+$100</span></button>
+      <button class="pop-btn" style="border:1px solid rgba(57,255,20,0.6);color:#39ff14;" onclick="brokeDoJob()">💼 FIND AN ODD JOB <span class="amt">+$100</span></button>
       <button class="pop-btn skip" onclick="location.reload()">✕ GIVE UP &amp; TRY AGAIN</button>
     </div>
   </div>
 </div>
 
-<!-- Graffiti mini-game -->
+<!-- Universal Mini-Game Shell -->
 
-<div id="graffitiGame" style="display:none;position:fixed;inset:0;background:#111;z-index:90;flex-direction:column;">
-  <div style="flex-shrink:0;padding:12px 16px;background:#000;border-bottom:1px solid rgba(57,255,20,0.4);display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-family:'Orbitron',sans-serif;font-size:10px;color:#39ff14;letter-spacing:2px;">🖌️ ODD JOB — PAINT OVER THE GRAFFITI</div>
-    <div style="font-size:9px;color:rgba(255,255,255,0.5);">Cover it white to get paid <span style="color:#fff01f;font-weight:bold;">$100</span></div>
+<div id="miniGameShell" style="display:none;position:fixed;inset:0;background:#080810;z-index:90;flex-direction:column;">
+  <!-- Header -->
+  <div id="mgHeader" style="flex-shrink:0;padding:11px 16px;background:#000;border-bottom:1px solid rgba(0,245,255,0.3);display:flex;align-items:center;justify-content:space-between;">
+    <div id="mgTitle" style="font-family:'Orbitron',sans-serif;font-size:10px;color:#00f5ff;letter-spacing:2px;"></div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.45);">Complete to earn <span style="color:#fff01f;font-weight:bold;" id="mgReward">$100</span></div>
   </div>
-  <div style="flex-shrink:0;padding:8px 16px;background:#0a0a0a;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;">
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:1px;">COVERED:</div>
-    <div style="flex:1;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
-      <div id="gfProgressBar" style="height:100%;width:0%;background:#39ff14;border-radius:4px;transition:width 0.1s;box-shadow:0 0 8px #39ff14;"></div>
+  <!-- Progress bar -->
+  <div style="flex-shrink:0;padding:7px 16px;background:#050510;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:12px;">
+    <div id="mgProgressLabel" style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;min-width:60px;">PROGRESS</div>
+    <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+      <div id="mgProgressBar" style="height:100%;width:0%;background:#00f5ff;border-radius:4px;transition:width 0.15s;box-shadow:0 0 8px #00f5ff;"></div>
     </div>
-    <div id="gfPct" style="font-family:'Orbitron',sans-serif;font-size:11px;color:#39ff14;min-width:36px;">0%</div>
+    <div id="mgProgressPct" style="font-family:'Orbitron',sans-serif;font-size:11px;color:#00f5ff;min-width:36px;">0%</div>
   </div>
-  <canvas id="gfCanvas" style="flex:1;display:block;touch-action:none;cursor:crosshair;"></canvas>
-  <div id="gfDone" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px;">
-    <div style="font-size:48px;">💵</div>
+  <!-- Canvas -->
+  <canvas id="mgCanvas" style="flex:1;display:block;touch-action:none;"></canvas>
+  <!-- Done overlay -->
+  <div id="mgDone" style="display:none;position:fixed;inset:0;background:rgba(0,0,10,0.92);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:28px;">
+    <div id="mgDoneEmoji" style="font-size:52px;">💵</div>
     <div style="font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:#39ff14;text-shadow:0 0 20px #39ff14;">GREAT WORK!</div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.7);">The business paid you <span style="color:#fff01f;font-weight:bold;">$100</span>!</div>
-    <button onclick="graffitiFinish()" style="background:#39ff14;border:none;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:3px;color:#000;padding:14px 32px;border-radius:4px;cursor:pointer;box-shadow:0 0 16px #39ff14;margin-top:8px;">BACK TO ROAD TRIP</button>
+    <div id="mgDoneMsg" style="font-size:13px;color:rgba(255,255,255,0.7);max-width:280px;line-height:1.6;"></div>
+    <button onclick="miniGameFinish()" style="background:#39ff14;border:none;font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:3px;color:#000;padding:14px 32px;border-radius:4px;cursor:pointer;box-shadow:0 0 16px #39ff14;margin-top:6px;">BACK TO ROAD TRIP</button>
   </div>
 </div>
 
@@ -481,16 +485,16 @@ var btn={left:false,right:false,thrust:false};
 ═══════════════════════════════════════════════════════════ */
 // Venues (positions in 6400x6400 world matching US map layout)
 var VENUES=[
-  {name:"Red Rocks",       city:"Morrison, CO",      px:2048,py:2560, price:65,  artist:"The Midnight",        ytUrl:"https://www.youtube.com/watch?v=8It-MpTJ8sM"},
-  {name:"Madison Sq Garden",city:"New York, NY",     px:5408,py:1536, price:120, artist:"Bruce Springsteen",   ytUrl:"https://www.youtube.com/watch?v=1e4gMFKdOVs"},
-  {name:"Hollywood Bowl",  city:"Los Angeles, CA",   px:576, py:2880, price:85,  artist:"Fleetwood Mac",       ytUrl:"https://www.youtube.com/watch?v=Zj1SSMA3z-c"},
-  {name:"Ryman Auditorium",city:"Nashville, TN",     px:4224,py:2816, price:55,  artist:"Dolly Parton",        ytUrl:"https://www.youtube.com/watch?v=RgljMFUjmFE"},
-  {name:"The Fillmore",    city:"San Francisco, CA", px:448, py:2240, price:45,  artist:"Grateful Dead",       ytUrl:"https://www.youtube.com/watch?v=B-xUGJ3_k8I"},
-  {name:"Wrigley Field",   city:"Chicago, IL",       px:4032,py:1728, price:95,  artist:"Pearl Jam",           ytUrl:"https://www.youtube.com/watch?v=sBvOq7AHSmA"},
-  {name:"Fenway Park",     city:"Boston, MA",        px:5600,py:1216, price:110, artist:"Aerosmith",           ytUrl:"https://www.youtube.com/watch?v=0gAFf0LZCXY"},
-  {name:"Gorge Amphitheatre",city:"George, WA",      px:704, py:960,  price:70,  artist:"Dave Matthews Band",  ytUrl:"https://www.youtube.com/watch?v=y4U3oIaLCnU"},
-  {name:"Moody Center",    city:"Austin, TX",        px:2688,py:4096, price:75,  artist:"Willie Nelson",       ytUrl:"https://www.youtube.com/watch?v=sNa6jLXNRwA"},
-  {name:"Kaseya Center",   city:"Miami, FL",         px:4672,py:4736, price:100, artist:"Bad Bunny",           ytUrl:"https://www.youtube.com/watch?v=drgrvnMopaM"}
+  {name:"Red Rocks",       city:"Morrison, CO",      px:2048,py:2560, price:65,  artist:"The Midnight",        ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Madison Sq Garden",city:"New York, NY",     px:5408,py:1536, price:120, artist:"Bruce Springsteen",   ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Hollywood Bowl",  city:"Los Angeles, CA",   px:576, py:2880, price:85,  artist:"Fleetwood Mac",       ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Ryman Auditorium",city:"Nashville, TN",     px:4224,py:2816, price:55,  artist:"Dolly Parton",        ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"The Fillmore",    city:"San Francisco, CA", px:448, py:2240, price:45,  artist:"Grateful Dead",       ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Wrigley Field",   city:"Chicago, IL",       px:4032,py:1728, price:95,  artist:"Pearl Jam",           ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Fenway Park",     city:"Boston, MA",        px:5600,py:1216, price:110, artist:"Aerosmith",           ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Gorge Amphitheatre",city:"George, WA",      px:704, py:960,  price:70,  artist:"Dave Matthews Band",  ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Moody Center",    city:"Austin, TX",        px:2688,py:4096, price:75,  artist:"Willie Nelson",       ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"},
+  {name:"Kaseya Center",   city:"Miami, FL",         px:4672,py:4736, price:100, artist:"Bad Bunny",           ytUrl:"https://youtu.be/Wyd9OcI37AY?si=hJA-Emx2jA2R1Xae"}
 ];
 
 var CITIES=[
@@ -778,20 +782,6 @@ function openCity(name){
   document.getElementById('merchAmt').textContent='+$'+cityMerchAmt;
   document.getElementById('cityPop').classList.add('show');
 }
-function doJob(){
-  document.getElementById('cityPop').classList.remove('show');
-  popOpen=true;
-  launchGraffitiGame(false);
-}
-function brokePullOver(){
-  gameActive=false;
-  document.getElementById('brokePop').classList.add('show');
-}
-function brokeDoJob(){
-  document.getElementById('brokePop').classList.remove('show');
-  launchGraffitiGame(true);
-}
-function doMerch(){money+=cityMerchAmt;showAlert('MERCH SOLD! +$'+cityMerchAmt,2500);spawnParts(bus.x,bus.y,10,['#00f5ff','#fff'],3.5);closeCity();}
 function doCamp(){money-=15;showAlert('CAMPED FOR THE NIGHT. -$15',2500);closeCity();}
 function doFood(){money-=12;showAlert('CREW FED! -$12',2500);closeCity();}
 function closeCity(){
@@ -1330,148 +1320,664 @@ function startGame(){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   GRAFFITI MINI-GAME
+   MINI-GAME ENGINE
 ═══════════════════════════════════════════════════════════ */
-var GF={canvas:null,ctx:null,painting:false,lastX:0,lastY:0,coveredPixels:0,totalPixels:0,fromBroke:false,checkTimer:0};
+var MG={
+  id:null,fromBroke:false,fromMerch:false,
+  canvas:null,ctx:null,raf:null,running:false,
+  progress:0,done:false,
+  objs:[],dragging:null,dragOffX:0,dragOffY:0,
+  state:{},timer:0
+};
+
+var JOB_GAMES=['graffiti','trash','parking','windshield','pressure','dogwalk'];
+var MERCH_GAMES=['merch'];
+
+function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+function doJob(){
+  document.getElementById('cityPop').classList.remove('show');
+  popOpen=true;
+  launchMiniGame(pickRandom(JOB_GAMES),false,false);
+}
+function doMerch(){
+  document.getElementById('cityPop').classList.remove('show');
+  popOpen=true;
+  launchMiniGame('merch',false,true);
+}
+function brokePullOver(){
+  gameActive=false;
+  document.getElementById('brokePop').classList.add('show');
+}
+function brokeDoJob(){
+  document.getElementById('brokePop').classList.remove('show');
+  launchMiniGame(pickRandom(JOB_GAMES),true,false);
+}
+
+function launchMiniGame(id,fromBroke,fromMerch){
+  MG.id=id; MG.fromBroke=fromBroke; MG.fromMerch=fromMerch;
+  MG.progress=0; MG.done=false; MG.objs=[]; MG.dragging=null; MG.state={}; MG.timer=0;
+  if(MG.raf){cancelAnimationFrame(MG.raf);MG.raf=null;}
+  var shell=document.getElementById('miniGameShell');
+  shell.style.display='flex';
+  document.getElementById('mgDone').style.display='none';
+  document.getElementById('mgProgressBar').style.width='0%';
+  document.getElementById('mgProgressPct').textContent='0%';
+  MG.canvas=document.getElementById('mgCanvas');
+  MG.ctx=MG.canvas.getContext('2d');
+  MG.canvas.width=window.innerWidth;
+  var hdr=document.getElementById('mgHeader');
+  MG.canvas.height=window.innerHeight-hdr.offsetHeight-38;
+  var configs={
+    graffiti:{title:'🖌️ ODD JOB — PAINT OVER THE GRAFFITI',reward:'$100',emoji:'🎨',msg:'The shop paid you $100 to clean up the wall!',label:'COVERED',color:'#39ff14'},
+    trash:   {title:'🗑️ ODD JOB — CLEAN UP THE PARK',reward:'$100',emoji:'🌿',msg:'The city paid you $100 for cleaning up!',label:'CLEANED',color:'#39ff14'},
+    parking: {title:'🚗 ODD JOB — REPAINT PARKING LINES',reward:'$100',emoji:'🅿️',msg:'The lot owner paid you $100!',label:'PAINTED',color:'#fff01f'},
+    windshield:{title:'🚘 ODD JOB — CLEAN WINDSHIELDS AT GAS STATION',reward:'$100',emoji:'✨',msg:'The station paid you $100 in tips!',label:'CLEANED',color:'#00f5ff'},
+    pressure:{title:'💦 ODD JOB — PRESSURE WASH THE DRIVEWAY',reward:'$100',emoji:'💧',msg:'The homeowner paid you $100!',label:'WASHED',color:'#00f5ff'},
+    dogwalk: {title:'🐕 ODD JOB — WALK DOGS AT THE SHELTER',reward:'$100',emoji:'🐾',msg:'The shelter paid you $100 for the walk!',label:'TASKS',color:'#ff6b1a'},
+    merch:   {title:'🎽 SELL MERCH TO THE FANS!',reward:'$120',emoji:'💰',msg:'You sold out! The fans loved it!',label:'SOLD',color:'#ff2d78'}
+  };
+  var cfg=configs[id]||configs.graffiti;
+  document.getElementById('mgTitle').textContent=cfg.title;
+  document.getElementById('mgReward').textContent=cfg.reward;
+  document.getElementById('mgDoneEmoji').textContent=cfg.emoji;
+  document.getElementById('mgDoneMsg').textContent=cfg.msg;
+  document.getElementById('mgProgressLabel').textContent=cfg.label;
+  document.getElementById('mgProgressBar').style.background=cfg.color;
+  document.getElementById('mgProgressBar').style.boxShadow='0 0 8px '+cfg.color;
+  document.getElementById('mgProgressPct').style.color=cfg.color;
+  // Init game
+  var inits={graffiti:initGraffiti,trash:initTrash,parking:initParking,windshield:initWindshield,pressure:initPressure,dogwalk:initDogwalk,merch:initMerch};
+  (inits[id]||initGraffiti)();
+  setupMGInput();
+}
+
+function setMGProgress(pct){
+  pct=Math.min(100,Math.round(pct));
+  document.getElementById('mgProgressBar').style.width=pct+'%';
+  document.getElementById('mgProgressPct').textContent=pct+'%';
+  if(pct>=100&&!MG.done){
+    MG.done=true;
+    setTimeout(function(){document.getElementById('mgDone').style.display='flex';},400);
+  }
+}
+
+function miniGameFinish(){
+  document.getElementById('miniGameShell').style.display='none';
+  document.getElementById('mgDone').style.display='none';
+  if(MG.raf){cancelAnimationFrame(MG.raf);MG.raf=null;}
+  var reward=MG.fromMerch?120:100;
+  money+=reward;
+  showAlert('JOB DONE! +$'+reward,3000);
+  spawnParts(bus.x,bus.y,22,['#39ff14','#fff01f','#00f5ff'],5);
+  updateHUD();
+  if(MG.fromBroke){gameActive=true;popOpen=false;setTimeout(function(){nearCityName='';},1000);}
+  else{closeCity();}
+}
+
+function setupMGInput(){
+  var c=MG.canvas;
+  // remove old listeners by cloning
+  var nc=c.cloneNode(true);c.parentNode.replaceChild(nc,c);
+  MG.canvas=nc;MG.ctx=nc.getContext('2d');
+  var getPos=function(e){var r=MG.canvas.getBoundingClientRect();var src=e.touches?e.touches[0]:e;return{x:src.clientX-r.left,y:src.clientY-r.top};};
+  nc.addEventListener('mousedown',function(e){var p=getPos(e);mgPointerDown(p.x,p.y);});
+  nc.addEventListener('mousemove',function(e){var p=getPos(e);mgPointerMove(p.x,p.y);});
+  nc.addEventListener('mouseup',function(e){var p=getPos(e);mgPointerUp(p.x,p.y);});
+  nc.addEventListener('touchstart',function(e){e.preventDefault();var p=getPos(e);mgPointerDown(p.x,p.y);},{passive:false});
+  nc.addEventListener('touchmove',function(e){e.preventDefault();var p=getPos(e);mgPointerMove(p.x,p.y);},{passive:false});
+  nc.addEventListener('touchend',function(e){e.preventDefault();var p=getPos(e.changedTouches?{touches:e.changedTouches}:e);mgPointerUp(p.x,p.y);},{passive:false});
+}
+
+function mgPointerDown(x,y){
+  var g={graffiti:mgPaintDown,trash:mgPickDown,parking:mgPaintDown,windshield:mgScrubDown,pressure:mgPaintDown,dogwalk:mgDogDown,merch:mgMerchDown};
+  (g[MG.id]||mgPaintDown)(x,y);
+}
+function mgPointerMove(x,y){
+  var g={graffiti:mgPaintMove,trash:mgPickMove,parking:mgPaintMove,windshield:mgScrubMove,pressure:mgPaintMove,dogwalk:mgDogMove,merch:mgMerchMove};
+  (g[MG.id]||mgPaintMove)(x,y);
+}
+function mgPointerUp(x,y){
+  var g={graffiti:mgPaintUp,trash:mgPickUp,parking:mgPaintUp,windshield:mgScrubUp,pressure:mgPaintUp,dogwalk:mgDogUp,merch:mgMerchUp};
+  (g[MG.id]||mgPaintUp)(x,y);
+}
+
+/* ── SHARED PAINT BRUSH (graffiti / parking / pressure) ── */
+function mgPaintDown(x,y){MG.state.painting=true;MG.state.lx=x;MG.state.ly=y;mgPaintStroke(x,y,x,y);}
+function mgPaintMove(x,y){if(!MG.state.painting)return;mgPaintStroke(MG.state.lx,MG.state.ly,x,y);MG.state.lx=x;MG.state.ly=y;}
+function mgPaintUp(){MG.state.painting=false;}
+function mgPaintStroke(x1,y1,x2,y2){
+  var c=MG.ctx,cfg=MG.state.paintCfg||{col:'rgba(245,240,230,1)',w:40};
+  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
+  c.strokeStyle=cfg.col;c.lineWidth=cfg.w;c.lineCap='round';c.lineJoin='round';c.stroke();
+  mgSampleCoverage();
+}
+function mgSampleCoverage(){
+  MG.timer++;if(MG.timer%10!==0)return;
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  var step=14,covered=0,total=0,data=c.getImageData(0,0,W,H).data;
+  var tgt=MG.state.coverTarget||{r:200,g:200,b:200};
+  for(var y=0;y<H;y+=step){for(var x=0;x<W;x+=step){
+    var i=(y*W+x)*4;
+    if(data[i]>tgt.r&&data[i+1]>tgt.g&&data[i+2]>tgt.b)covered++;
+    total++;
+  }}
+  setMGProgress((covered/total)*100);
+}
+
+/* ══════════════════════════════════════════
+   GAME 1 — GRAFFITI PAINT-OVER
+══════════════════════════════════════════ */
 var GRAFFITI_COLORS=['#ff2d78','#bf5fff','#ff6b1a','#fff01f','#00f5ff','#39ff14'];
 var GRAFFITI_WORDS=['NEON','RAGE','SQUAD','VIBE','PUNK','ZONE','BZZZ','BYTE'];
-
-function launchGraffitiGame(fromBroke){
-  GF.fromBroke=fromBroke;
-  GF.painting=false;GF.coveredPixels=0;GF.totalPixels=0;GF.checkTimer=0;
-  var el=document.getElementById('graffitiGame');
-  el.style.display='flex';
-  document.getElementById('gfDone').style.display='none';
-  document.getElementById('gfProgressBar').style.width='0%';
-  document.getElementById('gfPct').textContent='0%';
-  GF.canvas=document.getElementById('gfCanvas');
-  GF.ctx=GF.canvas.getContext('2d');
-  GF.canvas.width=window.innerWidth;
-  var headerH=44+38;
-  GF.canvas.height=window.innerHeight-headerH;
-  drawGraffitiWall();
-  setupGraffitiInput();
-}
-
-function drawGraffitiWall(){
-  var c=GF.ctx,W=GF.canvas.width,H=GF.canvas.height;
-  // Brick wall background
+function initGraffiti(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
   c.fillStyle='#2a1a10';c.fillRect(0,0,W,H);
-  c.strokeStyle='rgba(0,0,0,0.5)';c.lineWidth=2;
-  var brickH=28,brickW=60;
-  for(var row=0;row<Math.ceil(H/brickH)+1;row++){
-    var offset=(row%2===0)?0:brickW/2;
+  c.strokeStyle='rgba(0,0,0,0.45)';c.lineWidth=2;
+  var bH=28,bW=58;
+  for(var row=0;row<=Math.ceil(H/bH)+1;row++){
+    var off=(row%2===0)?0:bW/2;
     c.fillStyle=row%3===0?'#2e1c11':'#341f12';
-    for(var col=-1;col<Math.ceil(W/brickW)+2;col++){
-      var bx=col*brickW+offset,by=row*brickH;
-      c.fillRect(bx,by,brickW-2,brickH-2);
-      c.strokeRect(bx,by,brickW-2,brickH-2);
+    for(var col=-1;col<=Math.ceil(W/bW)+1;col++){
+      var bx=col*bW+off,by=row*bH;c.fillRect(bx,by,bW-3,bH-3);c.strokeRect(bx,by,bW-3,bH-3);
     }
   }
-  // Spray paint graffiti tags (colorful)
-  var tags=[
-    {x:W*0.12,y:H*0.25,rot:-0.2,scale:1.1},
-    {x:W*0.42,y:H*0.18,rot:0.1,scale:1.4},
-    {x:W*0.72,y:H*0.30,rot:-0.1,scale:1.0},
-    {x:W*0.22,y:H*0.62,rot:0.15,scale:1.2},
-    {x:W*0.58,y:H*0.68,rot:-0.05,scale:0.9},
-    {x:W*0.85,y:H*0.60,rot:0.2,scale:1.0}
-  ];
+  var tags=[{x:W*.12,y:H*.28,r:-.2,s:1.1},{x:W*.42,y:H*.2,r:.1,s:1.4},{x:W*.74,y:H*.32,r:-.1,s:1.0},{x:W*.22,y:H*.64,r:.15,s:1.2},{x:W*.6,y:H*.7,r:-.05,s:.9},{x:W*.85,y:H*.55,r:.2,s:1.0}];
   tags.forEach(function(t,i){
-    c.save();c.translate(t.x,t.y);c.rotate(t.rot);c.scale(t.scale,t.scale);
-    var col=GRAFFITI_COLORS[i%GRAFFITI_COLORS.length];
-    var word=GRAFFITI_WORDS[i%GRAFFITI_WORDS.length];
-    var fs=32+Math.random()*20;
-    c.font='bold '+fs+'px Arial,sans-serif';
-    c.shadowBlur=18;c.shadowColor=col;
-    // Outline
+    c.save();c.translate(t.x,t.y);c.rotate(t.r);c.scale(t.s,t.s);
+    var col=GRAFFITI_COLORS[i%6],word=GRAFFITI_WORDS[i%8],fs=32+Math.sin(i)*12;
+    c.font='bold '+fs+'px Arial,sans-serif';c.shadowBlur=18;c.shadowColor=col;
     c.strokeStyle='rgba(0,0,0,0.8)';c.lineWidth=5;c.strokeText(word,0,0);
-    // Fill
     c.fillStyle=col;c.fillText(word,0,0);
-    // Second word below
-    var word2=GRAFFITI_WORDS[(i+3)%GRAFFITI_WORDS.length];
-    c.font='bold '+(fs*0.7)+'px Arial,sans-serif';
-    c.strokeText(word2,fs*0.2,fs*0.9);c.fillText(word2,fs*0.2,fs*0.9);
-    c.shadowBlur=0;c.restore();
+    var w2=GRAFFITI_WORDS[(i+3)%8];c.font='bold '+(fs*.7)+'px Arial,sans-serif';
+    c.strokeText(w2,fs*.2,fs*.9);c.fillText(w2,fs*.2,fs*.9);c.shadowBlur=0;c.restore();
   });
-  // Big arrow
-  c.save();c.translate(W*0.5,H*0.48);
-  c.fillStyle='#ff2d78';c.shadowBlur=20;c.shadowColor='#ff2d78';
-  c.font='bold 48px Arial';c.textAlign='center';c.fillText('→ CREW WUZ HERE ←',0,0);
-  c.shadowBlur=0;c.restore();
-  // Store count of non-white pixels for coverage tracking
-  GF.totalPixels=W*H;
-  GF.coveredPixels=0;
+  c.save();c.translate(W*.5,H*.5);c.fillStyle='#ff2d78';c.shadowBlur=20;c.shadowColor='#ff2d78';
+  c.font='bold 40px Arial';c.textAlign='center';c.fillText('→ CREW WUZ HERE ←',0,0);c.shadowBlur=0;c.restore();
+  MG.state.paintCfg={col:'rgba(245,240,230,1)',w:44};
+  MG.state.coverTarget={r:200,g:200,b:200};
 }
 
-function setupGraffitiInput(){
-  var c=GF.canvas;
-  function startPaint(x,y){GF.painting=true;GF.lastX=x;GF.lastY=y;paintAt(x,y);}
-  function movePaint(x,y){if(!GF.painting)return;paintLine(GF.lastX,GF.lastY,x,y);GF.lastX=x;GF.lastY=y;}
-  function endPaint(){GF.painting=false;}
-  // Mouse
-  c.addEventListener('mousedown',function(e){var r=c.getBoundingClientRect();startPaint(e.clientX-r.left,e.clientY-r.top);});
-  c.addEventListener('mousemove',function(e){var r=c.getBoundingClientRect();movePaint(e.clientX-r.left,e.clientY-r.top);});
-  c.addEventListener('mouseup',endPaint);
-  c.addEventListener('mouseleave',endPaint);
-  // Touch
-  c.addEventListener('touchstart',function(e){e.preventDefault();var r=c.getBoundingClientRect();var t=e.touches[0];startPaint(t.clientX-r.left,t.clientY-r.top);},{passive:false});
-  c.addEventListener('touchmove',function(e){e.preventDefault();var r=c.getBoundingClientRect();var t=e.touches[0];movePaint(t.clientX-r.left,t.clientY-r.top);},{passive:false});
-  c.addEventListener('touchend',endPaint);
+/* ══════════════════════════════════════════
+   GAME 2 — TRASH CLEANUP (drag items to bins)
+══════════════════════════════════════════ */
+function initTrash(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Draw park background
+  c.fillStyle='#1a3a18';c.fillRect(0,0,W,H);
+  // Path
+  c.fillStyle='#8B7355';c.fillRect(W*.35,0,W*.3,H);
+  // Grass patches
+  for(var i=0;i<18;i++){c.beginPath();c.arc(Math.random()*W*.33,Math.random()*H,8+Math.random()*14,0,6.28);c.fillStyle='#1e4a1a';c.fill();}
+  for(var i=0;i<18;i++){c.beginPath();c.arc(W*.7+Math.random()*W*.3,Math.random()*H,8+Math.random()*14,0,6.28);c.fillStyle='#1e4a1a';c.fill();}
+  // Bushes
+  [[W*.08,H*.2],[W*.15,H*.6],[W*.82,H*.3],[W*.9,H*.75]].forEach(function(b){
+    c.beginPath();c.arc(b[0],b[1],22,0,6.28);c.fillStyle='#2d6b28';c.shadowBlur=8;c.shadowColor='#39ff14';c.fill();c.shadowBlur=0;
+  });
+  MG.state.bins=[
+    {x:W*.38,y:H*.08,w:38,h:48,type:'recycle',col:'#39ff14',label:'♻️'},
+    {x:W*.56,y:H*.08,w:38,h:48,type:'trash',col:'#aaa',label:'🗑️'}
+  ];
+  var trashItems=[
+    {type:'recycle',emoji:'🍾',label:'bottle'},{type:'recycle',emoji:'🥤',label:'can'},
+    {type:'recycle',emoji:'📰',label:'paper'},{type:'recycle',emoji:'🧴',label:'bottle'},
+    {type:'trash',emoji:'🛍️',label:'bag'},{type:'trash',emoji:'🧻',label:'wrapper'},
+    {type:'trash',emoji:'🍟',label:'carton'},{type:'trash',emoji:'🧃',label:'box'}
+  ];
+  MG.objs=[];
+  trashItems.forEach(function(t,i){
+    var side=i%2===0?0:1;
+    MG.objs.push({
+      type:t.type,emoji:t.emoji,label:t.label,
+      x:W*(side===0?.05+Math.random()*.25:.68+Math.random()*.25),
+      y:H*.22+Math.random()*H*.65,
+      r:22,picked:false,done:false
+    });
+  });
+  MG.state.scored=0;
+  drawTrash();
+}
+function drawTrash(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Redraw background
+  c.fillStyle='#1a3a18';c.fillRect(0,0,W,H);
+  c.fillStyle='#8B7355';c.fillRect(W*.35,0,W*.3,H);
+  for(var i=0;i<12;i++){c.beginPath();c.arc(30+i*(W*.028),H*.5+Math.sin(i)*80,10+Math.sin(i)*6,0,6.28);c.fillStyle='#1e4a1a';c.fill();}
+  [[W*.08,H*.2],[W*.15,H*.6],[W*.82,H*.3],[W*.9,H*.75]].forEach(function(b){c.beginPath();c.arc(b[0],b[1],22,0,6.28);c.fillStyle='#2d6b28';c.shadowBlur=8;c.shadowColor='#39ff14';c.fill();c.shadowBlur=0;});
+  // Bins
+  MG.state.bins.forEach(function(b){
+    c.fillStyle='#222';c.fillRect(b.x,b.y,b.w,b.h);
+    c.strokeStyle=b.col;c.lineWidth=2;c.shadowBlur=10;c.shadowColor=b.col;c.strokeRect(b.x,b.y,b.w,b.h);c.shadowBlur=0;
+    c.font='20px sans-serif';c.textAlign='center';c.fillText(b.label,b.x+b.w/2,b.y+b.h*.6);
+  });
+  // Items
+  MG.objs.forEach(function(o){
+    if(o.done)return;
+    c.font='28px sans-serif';c.textAlign='center';
+    c.fillText(o.emoji,o.x,o.y+10);
+    if(MG.dragging===o){c.strokeStyle='#fff01f';c.lineWidth=2;c.beginPath();c.arc(o.x,o.y-5,o.r,0,6.28);c.stroke();}
+  });
+}
+function mgPickDown(x,y){
+  for(var i=MG.objs.length-1;i>=0;i--){
+    var o=MG.objs[i];if(o.done)continue;
+    var dx=x-o.x,dy=y-o.y;
+    if(Math.sqrt(dx*dx+dy*dy)<o.r+8){MG.dragging=o;MG.dragOffX=dx;MG.dragOffY=dy;break;}
+  }
+}
+function mgPickMove(x,y){
+  if(!MG.dragging)return;
+  MG.dragging.x=x-MG.dragOffX;MG.dragging.y=y-MG.dragOffY;
+  drawTrash();
+}
+function mgPickUp(x,y){
+  if(!MG.dragging)return;
+  var o=MG.dragging;MG.dragging=null;
+  // Check drop on correct bin
+  MG.state.bins.forEach(function(b){
+    if(x>b.x&&x<b.x+b.w&&y>b.y&&y<b.y+b.h){
+      if(o.type===b.type){o.done=true;MG.state.scored++;setMGProgress((MG.state.scored/MG.objs.length)*100);}
+      else{o.x=MG.canvas.width*.5+Math.random()*60-30;o.y=MG.canvas.height*.5;}// wrong bin, bounce back
+    }
+  });
+  drawTrash();
 }
 
-function paintAt(x,y){
-  var c=GF.ctx;
-  c.beginPath();c.arc(x,y,22,0,Math.PI*2);
-  c.fillStyle='rgba(245,240,230,1)';c.fill();
-  updateGraffitiProgress();
-}
-function paintLine(x1,y1,x2,y2){
-  var c=GF.ctx;
-  c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);
-  c.strokeStyle='rgba(245,240,230,1)';c.lineWidth=44;c.lineCap='round';c.lineJoin='round';c.stroke();
-  updateGraffitiProgress();
-}
-
-function updateGraffitiProgress(){
-  GF.checkTimer++;
-  if(GF.checkTimer%8!==0)return; // sample every 8 strokes
-  var c=GF.ctx,W=GF.canvas.width,H=GF.canvas.height;
-  // Sample a grid of pixels to estimate coverage (fast)
-  var step=12,covered=0,total=0;
-  var data=c.getImageData(0,0,W,H).data;
-  for(var y=0;y<H;y+=step){
-    for(var x=0;x<W;x+=step){
-      var idx=(y*W+x)*4;
-      // Count pixels that are close to white (painted over)
-      if(data[idx]>200&&data[idx+1]>200&&data[idx+2]>200)covered++;
-      total++;
+/* ══════════════════════════════════════════
+   GAME 3 — PARKING LOT LINES
+══════════════════════════════════════════ */
+function initParking(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Asphalt
+  c.fillStyle='#1c1c1c';c.fillRect(0,0,W,H);
+  // Faded ghost lines to paint over
+  var lineW=3.5,spaceW=Math.min(W/6,70),spaceH=Math.min(H/4,90),cols=5,rows=3;
+  var startX=(W-cols*spaceW)/2,startY=H*.15;
+  MG.state.lines=[];
+  for(var row=0;row<rows;row++){
+    for(var col=0;col<=cols;col++){
+      var lx=startX+col*spaceW,ly=startY+row*spaceH;
+      // Draw faded ghost
+      c.strokeStyle='rgba(180,180,180,0.18)';c.lineWidth=lineW+2;
+      c.beginPath();c.moveTo(lx,ly);c.lineTo(lx,ly+spaceH*.88);c.stroke();
+      MG.state.lines.push({x1:lx,y1:ly,x2:lx,y2:ly+spaceH*.88,painted:false});
     }
   }
-  var pct=Math.min(100,Math.round((covered/total)*100));
-  document.getElementById('gfProgressBar').style.width=pct+'%';
-  document.getElementById('gfPct').textContent=pct+'%';
-  if(pct>=85){
-    setTimeout(function(){
-      document.getElementById('gfDone').style.display='flex';
-    },200);
+  // Horizontal rows
+  for(var row=0;row<=rows;row++){
+    var ly=startY+row*spaceH;
+    c.strokeStyle='rgba(180,180,180,0.18)';c.lineWidth=lineW;
+    c.beginPath();c.moveTo(startX,ly);c.lineTo(startX+cols*spaceW,ly);c.stroke();
   }
+  // Some parked cars
+  [[startX+spaceW*.1,startY+spaceH*.1,'#ff2d78'],[startX+spaceW*2.1,startY+spaceH*.1,'#00f5ff'],[startX+spaceW*4.1,startY+spaceH*.1,'#39ff14'],
+   [startX+spaceW*.1,startY+spaceH*1.1,'#bf5fff'],[startX+spaceW*3.1,startY+spaceH*2.1,'#ff6b1a']].forEach(function(car){
+    c.fillStyle=car[2];c.shadowBlur=12;c.shadowColor=car[2];
+    c.fillRect(car[0],car[1],spaceW*.78,spaceH*.7);
+    c.shadowBlur=0;c.fillStyle='rgba(0,0,0,0.4)';c.fillRect(car[0]+4,car[1]+4,spaceW*.78-8,spaceH*.2);
+  });
+  MG.state.paintCfg={col:'rgba(255,240,60,1)',w:6};
+  MG.state.coverTarget={r:200,g:180,b:0};
 }
 
-function graffitiFinish(){
-  document.getElementById('graffitiGame').style.display='none';
-  document.getElementById('gfDone').style.display='none';
-  money+=100;
-  showAlert('PAINTING DONE! +$100',3000);
-  spawnParts(bus.x,bus.y,20,['#39ff14','#fff01f','#fff'],5);
-  updateHUD();
-  if(GF.fromBroke){
-    gameActive=true;
-    popOpen=false;
-    setTimeout(function(){nearCityName='';},1000);
-  } else {
-    closeCity();
+/* ══════════════════════════════════════════
+   GAME 4 — WINDSHIELD CLEANING (scrub circles)
+══════════════════════════════════════════ */
+function initWindshield(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Gas station background
+  c.fillStyle='#111118';c.fillRect(0,0,W,H);
+  // Ground
+  c.fillStyle='#222228';c.fillRect(0,H*.65,W,H*.35);
+  // Pump
+  c.fillStyle='#1a1a30';c.fillRect(W*.04,H*.3,W*.1,H*.35);
+  c.strokeStyle='#00f5ff';c.lineWidth=2;c.shadowBlur=8;c.shadowColor='#00f5ff';c.strokeRect(W*.04,H*.3,W*.1,H*.35);c.shadowBlur=0;
+  c.fillStyle='#00f5ff';c.font='8px Orbitron,sans-serif';c.textAlign='center';c.fillText('GAS',W*.09,H*.52);
+  // Cars with dirty windshields
+  var cars=[
+    {x:W*.2,y:H*.38,w:W*.22,h:H*.25,col:'#ff2d78',dirty:true},
+    {x:W*.5,y:H*.38,w:W*.22,h:H*.25,col:'#39ff14',dirty:true},
+    {x:W*.75,y:H*.38,w:W*.18,h:H*.22,col:'#bf5fff',dirty:true}
+  ];
+  MG.state.cars=cars;
+  MG.state.scrubbed=[];// array of {cx,cy,r} circles scrubbed
+  MG.state.totalBugs=cars.length*8;
+  drawWindshield();
+}
+function drawWindshield(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  c.fillStyle='#111118';c.fillRect(0,0,W,H);
+  c.fillStyle='#222228';c.fillRect(0,H*.65,W,H*.35);
+  c.fillStyle='#1a1a30';c.fillRect(W*.04,H*.3,W*.1,H*.35);
+  c.strokeStyle='#00f5ff';c.lineWidth=2;c.shadowBlur=6;c.shadowColor='#00f5ff';c.strokeRect(W*.04,H*.3,W*.1,H*.35);c.shadowBlur=0;
+  c.fillStyle='#00f5ff';c.font='8px Orbitron,sans-serif';c.textAlign='center';c.fillText('GAS',W*.09,H*.52);
+  MG.state.cars.forEach(function(car){
+    // Car body
+    c.fillStyle=car.col;c.shadowBlur=14;c.shadowColor=car.col;c.fillRect(car.x,car.y,car.w,car.h);c.shadowBlur=0;
+    // Wheels
+    [[car.x+car.w*.15,car.y+car.h],[car.x+car.w*.75,car.y+car.h]].forEach(function(w){c.beginPath();c.arc(w[0],w[1],car.h*.22,0,6.28);c.fillStyle='#111';c.fill();});
+    // Windshield area
+    var wx=car.x+car.w*.1,wy=car.y+car.h*.08,ww=car.w*.8,wh=car.h*.45;
+    c.fillStyle='rgba(150,200,255,0.15)';c.fillRect(wx,wy,ww,wh);
+    c.strokeStyle='rgba(150,200,255,0.4)';c.lineWidth=1.5;c.strokeRect(wx,wy,ww,wh);
+    // Bugs
+    if(car.dirty){
+      for(var i=0;i<8;i++){
+        var bx=wx+15+((i*47)%Math.max(1,ww-30)),by=wy+8+((i*23)%Math.max(1,wh-16));
+        c.font='11px sans-serif';c.textAlign='center';c.fillText('🐛',bx,by+8);
+      }
+    }
+    // Scrub clean zones
+    c.save();c.beginPath();c.rect(wx,wy,ww,wh);c.clip();
+    MG.state.scrubbed.forEach(function(s){
+      if(s.car===car){c.beginPath();c.arc(s.x,s.y,s.r,0,6.28);c.fillStyle='rgba(200,230,255,0.85)';c.fill();}
+    });
+    c.restore();
+  });
+  // Hint
+  c.fillStyle='rgba(0,245,255,0.5)';c.font='9px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('SCRUB THE WINDSHIELDS — RUB FINGER BACK & FORTH',W/2,H*.9);
+}
+function mgScrubDown(x,y){MG.state.scrubbing=true;mgScrubAt(x,y);}
+function mgScrubMove(x,y){if(!MG.state.scrubbing)return;mgScrubAt(x,y);}
+function mgScrubUp(){MG.state.scrubbing=false;}
+function mgScrubAt(x,y){
+  MG.state.cars.forEach(function(car){
+    var wx=car.x+car.w*.1,wy=car.y+car.h*.08,ww=car.w*.8,wh=car.h*.45;
+    if(x>wx&&x<wx+ww&&y>wy&&y<wy+wh){
+      MG.state.scrubbed.push({car:car,x:x,y:y,r:22});
+      MG.timer++;
+      if(MG.timer%3===0){
+        var total=0,clean=0;
+        MG.state.cars.forEach(function(car2){
+          var wx2=car2.x+car2.w*.1,ww2=car2.w*.8,wy2=car2.y+car2.h*.08,wh2=car2.h*.45;
+          var area=ww2*wh2;
+          var cov=Math.min(area,MG.state.scrubbed.filter(function(s){return s.car===car2;}).length*22*22*Math.PI);
+          clean+=Math.min(1,cov/area);total++;
+        });
+        setMGProgress((clean/total)*100);
+      }
+    }
+  });
+  drawWindshield();
+}
+
+/* ══════════════════════════════════════════
+   GAME 5 — PRESSURE WASH DRIVEWAY
+══════════════════════════════════════════ */
+function initPressure(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Dirty driveway
+  c.fillStyle='#2a2520';c.fillRect(0,0,W,H);
+  // Stains
+  for(var i=0;i<22;i++){
+    var sx=Math.random()*W,sy=Math.random()*H,sr=20+Math.random()*55;
+    c.beginPath();c.arc(sx,sy,sr,0,6.28);
+    c.fillStyle='rgba(60,45,30,0.7)';c.fill();
   }
+  // House outline at top
+  c.strokeStyle='rgba(255,100,40,0.3)';c.lineWidth=3;
+  c.strokeRect(W*.25,0,W*.5,H*.12);
+  c.fillStyle='rgba(255,100,40,0.15)';c.fillRect(W*.25,0,W*.5,H*.12);
+  c.fillStyle='rgba(255,120,50,0.5)';c.font='9px Orbitron,sans-serif';c.textAlign='center';c.fillText('🏠 HOUSE',W*.5,H*.07);
+  // Sidewalk stripe
+  c.strokeStyle='rgba(255,255,255,0.08)';c.lineWidth=8;c.setLineDash([30,20]);
+  c.beginPath();c.moveTo(0,H*.6);c.lineTo(W,H*.6);c.stroke();c.setLineDash([]);
+  c.fillStyle='rgba(255,255,255,0.12)';c.font='8px Orbitron,sans-serif';c.textAlign='left';c.fillText('SIDEWALK',8,H*.58);
+  // Hint
+  c.fillStyle='rgba(0,245,255,0.4)';c.font='9px Orbitron,sans-serif';c.textAlign='center';c.fillText('DRAG TO PRESSURE WASH — CLEAN THE WHOLE SURFACE',W*.5,H*.95);
+  MG.state.paintCfg={col:'rgba(48,42,36,1)',w:52};
+  MG.state.coverTarget={r:40,g:35,b:28};
+  // Overlay clean layer (we paint the DIRTY color back = washing off dirt)
+  // Actually we paint the clean concrete color
+  MG.state.paintCfg={col:'rgba(165,158,148,1)',w:52};
+  MG.state.coverTarget={r:140,g:130,b:120};
+}
+
+/* ══════════════════════════════════════════
+   GAME 6 — DOG WALK (interactive loop)
+══════════════════════════════════════════ */
+function initDogwalk(){
+  var W=MG.canvas.width,H=MG.canvas.height;
+  MG.state={
+    phase:'walk',// walk→pee→frisbee→poop→done
+    tasks:0,totalTasks:5,
+    player:{x:W/2,y:H*.7},
+    dog:{x:W/2+40,y:H*.7,sniffing:0,peeing:false,peeTimer:0},
+    frisbee:null,frisbeeThrown:false,
+    poop:null,poopBin:{x:W*.88,y:H*.1,w:36,h:44},
+    bushes:[{x:W*.12,y:H*.3},{x:W*.35,y:H*.55},{x:W*.7,y:H*.25},{x:W*.85,y:H*.6}],
+    dragging:false,dogOnLead:true,
+    msg:'WALK THE DOG TO A BUSH! 🐕',
+    peeBushIdx:-1,frisbeeThrows:0,poopCollected:false
+  };
+  MG.raf=requestAnimationFrame(dogwalkLoop);
+}
+function dogwalkLoop(){
+  if(MG.id!=='dogwalk')return;
+  drawDogwalk();
+  MG.raf=requestAnimationFrame(dogwalkLoop);
+}
+function drawDogwalk(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height,S=MG.state;
+  // Park bg
+  c.fillStyle='#1a3a18';c.fillRect(0,0,W,H);
+  c.fillStyle='#8B7355';c.fillRect(W*.4,0,W*.2,H);// path
+  // Bushes
+  S.bushes.forEach(function(b,i){
+    c.beginPath();c.arc(b.x,b.y,26,0,6.28);
+    c.fillStyle=i===S.peeBushIdx?'#3a8a30':'#2d6b28';
+    c.shadowBlur=i===S.peeBushIdx?16:6;c.shadowColor='#39ff14';c.fill();c.shadowBlur=0;
+    if(i===S.peeBushIdx){c.fillStyle='#fff01f';c.font='14px sans-serif';c.textAlign='center';c.fillText('💦',b.x,b.y+6);}
+  });
+  // Poop bin
+  c.fillStyle='#222';c.fillRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
+  c.strokeStyle='#aaa';c.lineWidth=1.5;c.strokeRect(S.poopBin.x,S.poopBin.y,S.poopBin.w,S.poopBin.h);
+  c.font='18px sans-serif';c.textAlign='center';c.fillText('🗑️',S.poopBin.x+S.poopBin.w/2,S.poopBin.y+S.poopBin.h*.7);
+  // Poop on ground
+  if(S.poop&&!S.poopCollected){c.font='20px sans-serif';c.textAlign='center';c.fillText('💩',S.poop.x,S.poop.y);}
+  if(S.poop&&S.poopCollected&&S.dragging){c.font='20px sans-serif';c.textAlign='center';c.fillText('💩',S.player.x,S.player.y-30);}
+  // Frisbee
+  if(S.frisbee){c.beginPath();c.arc(S.frisbee.x,S.frisbee.y,12,0,6.28);c.fillStyle='#fff01f';c.shadowBlur=12;c.shadowColor='#fff01f';c.fill();c.shadowBlur=0;}
+  // Lead line
+  if(S.dogOnLead){c.beginPath();c.moveTo(S.player.x,S.player.y-10);c.lineTo(S.dog.x,S.dog.y-10);c.strokeStyle='rgba(255,255,255,0.35)';c.lineWidth=1.5;c.stroke();}
+  // Player (stick figure)
+  drawMgStick(c,S.player.x,S.player.y,'#00f5ff',null,Date.now()*.001);
+  // Dog
+  drawMgDog(c,S.dog.x,S.dog.y,S.dog.sniffing>0,S.dog.peeing);
+  // Message
+  c.fillStyle='rgba(0,0,0,0.55)';c.fillRect(0,H*.85,W,H*.15);
+  c.fillStyle='#fff01f';c.font='10px Orbitron,sans-serif';c.textAlign='center';c.fillText(S.msg,W/2,H*.93);
+  // Phase progress dots
+  var phases=['🦮','🌿','🥏','💩','✅'];
+  for(var i=0;i<phases.length;i++){
+    c.font='16px sans-serif';c.textAlign='center';
+    c.globalAlpha=i<S.tasks?1.0:0.25;c.fillText(phases[i],W/2+(i-2)*28,H*.83);
+  }
+  c.globalAlpha=1;
+}
+function drawMgStick(c,x,y,col,hair,t){
+  var bob=Math.sin(t*3)*3;
+  c.strokeStyle=col;c.lineWidth=2.5;c.shadowBlur=8;c.shadowColor=col;
+  c.beginPath();c.arc(x,y-22+bob,8,0,6.28);c.stroke();
+  c.beginPath();c.moveTo(x,y-14+bob);c.lineTo(x,y+2+bob);c.stroke();
+  c.beginPath();c.moveTo(x-10,y-8+bob);c.lineTo(x+10,y-8+bob);c.stroke();
+  c.beginPath();c.moveTo(x,y+2+bob);c.lineTo(x-8,y+18+bob);c.moveTo(x,y+2+bob);c.lineTo(x+8,y+18+bob);c.stroke();
+  c.shadowBlur=0;
+}
+function drawMgDog(c,x,y,sniffing,peeing){
+  var t=Date.now()*.003;
+  c.fillStyle='#c8a060';c.strokeStyle='#c8a060';c.lineWidth=2;c.shadowBlur=6;c.shadowColor='#c8a060';
+  // Body
+  c.beginPath();c.ellipse(x,y,18,11,0,0,6.28);c.fill();
+  // Head
+  c.beginPath();c.arc(x+(sniffing?16:14),y-(sniffing?6:8),9,0,6.28);c.fill();
+  // Ears
+  c.beginPath();c.ellipse(x+20,y-(sniffing?2:10),5,8,sniffing?.6:-.3,0,6.28);c.fill();
+  // Tail
+  c.beginPath();c.moveTo(x-18,y-4);c.quadraticCurveTo(x-28,y-20,x-22,y-26);c.strokeStyle='#c8a060';c.lineWidth=3;c.stroke();
+  // Legs
+  var legT=peeing?0:Math.sin(t)*8;
+  c.beginPath();c.moveTo(x-10,y+10);c.lineTo(x-10+legT,y+24);c.moveTo(x-4,y+10);c.lineTo(x-4-legT,y+24);c.moveTo(x+4,y+10);c.lineTo(x+4+legT,y+24);c.moveTo(x+10,y+10);c.lineTo(x+10-legT,y+24);c.strokeStyle='#c8a060';c.lineWidth=2;c.stroke();
+  if(peeing){c.beginPath();c.moveTo(x+16,y+8);c.lineTo(x+26,y+14);c.strokeStyle='rgba(255,240,80,0.8)';c.lineWidth=2;c.stroke();}
+  c.shadowBlur=0;
+}
+function mgDogDown(x,y){
+  var S=MG.state;
+  if(S.phase==='poop'&&S.poop&&!S.poopCollected){
+    var dx=x-S.poop.x,dy=y-S.poop.y;
+    if(Math.sqrt(dx*dx+dy*dy)<30){S.poopCollected=true;S.dragging=true;return;}
+  }
+  S.player.x=x;S.player.y=y;S.dog.x=x+40;S.dog.y=y;
+  // Check bush proximity
+  if(S.phase==='walk'){
+    S.bushes.forEach(function(b,i){
+      var dx=x-b.x,dy=y-b.y;
+      if(Math.sqrt(dx*dx+dy*dy)<50&&S.peeBushIdx<0){
+        S.peeBushIdx=i;S.dog.sniffing=60;S.msg='GOOD BOY! SNIFFING THE BUSH... 🐽';
+      }
+    });
+  }
+  if(S.phase==='frisbee'){
+    var ang=Math.atan2(y-S.player.y,x-S.player.x);
+    S.frisbee={x:S.player.x,y:S.player.y,vx:Math.cos(ang)*8,vy:Math.sin(ang)*8,age:0};
+  }
+}
+function mgDogMove(x,y){
+  var S=MG.state;
+  if(S.dragging&&S.poopCollected){S.player.x=x;S.player.y=y;}
+  else{S.player.x=x;S.player.y=y;if(S.dogOnLead){S.dog.x=x+40;S.dog.y=y;}}
+  // Dog peeing phase
+  if(S.phase==='pee'&&S.peeBushIdx>=0){
+    S.dog.sniffing=Math.max(0,S.dog.sniffing-1);
+    if(S.dog.sniffing===0&&!S.dog.peeing){S.dog.peeing=true;S.dog.peeTimer=60;S.msg='DOING HIS BUSINESS... 💦';}
+  }
+  if(S.dog.peeing){S.dog.peeTimer--;if(S.dog.peeTimer<=0){S.dog.peeing=false;advanceDogPhase();}}
+  // Frisbee movement
+  if(S.frisbee){
+    S.frisbee.x+=S.frisbee.vx;S.frisbee.y+=S.frisbee.vy;S.frisbee.age++;
+    if(S.frisbee.age>60){S.dog.x=S.frisbee.x;S.dog.y=S.frisbee.y;S.frisbee=null;S.frisbeeThrows++;if(S.frisbeeThrows>=2)advanceDogPhase();}
+  }
+}
+function mgDogUp(x,y){
+  var S=MG.state;
+  if(S.dragging){
+    S.dragging=false;
+    // Check bin drop
+    if(x>S.poopBin.x&&x<S.poopBin.x+S.poopBin.w&&y>S.poopBin.y&&y<S.poopBin.y+S.poopBin.h){
+      S.poop=null;advanceDogPhase();
+    }
+  }
+}
+function advanceDogPhase(){
+  var S=MG.state,W=MG.canvas.width,H=MG.canvas.height;
+  S.tasks++;setMGProgress((S.tasks/S.totalTasks)*100);
+  if(S.phase==='walk'){S.phase='pee';S.msg='NOW WAIT FOR HIM TO PEE! 🌿';}
+  else if(S.phase==='pee'){S.phase='frisbee';S.frisbeeThrows=0;S.msg='THROW THE FRISBEE! TAP AHEAD OF DOG 🥏';S.frisbee=null;}
+  else if(S.phase==='frisbee'){S.phase='poop';S.poop={x:S.dog.x+20,y:S.dog.y+30};S.msg='PICK UP THE POOP & DROP IN BIN! 💩';}
+  else if(S.phase==='poop'){S.phase='done';S.msg='GREAT WALK! ALL DONE! ✅';}
+}
+
+/* ══════════════════════════════════════════
+   GAME 7 — MERCH STAND (drag items to fans)
+══════════════════════════════════════════ */
+function initMerch(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height;
+  // Concert venue background
+  c.fillStyle='#0a000f';c.fillRect(0,0,W,H);
+  // Neon sign
+  c.font='bold 16px Orbitron,sans-serif';c.textAlign='center';c.fillStyle='#ff2d78';
+  c.shadowBlur=20;c.shadowColor='#ff2d78';c.fillText('⭐ CONCERT MERCH ⭐',W/2,H*.07);c.shadowBlur=0;
+  // Merch table
+  var tW=Math.min(W*.55,280),tH=50,tx=(W-tW)/2,ty=H*.12;
+  c.fillStyle='#1a0018';c.fillRect(tx,ty,tW,tH);
+  c.strokeStyle='#ff2d78';c.lineWidth=2;c.shadowBlur=10;c.shadowColor='#ff2d78';c.strokeRect(tx,ty,tW,tH);c.shadowBlur=0;
+  // Merch items on table
+  var items=[{type:'hat',emoji:'🧢',x:tx+tW*.1,y:ty+tH/2},{type:'shirt',emoji:'👕',x:tx+tW*.33,y:ty+tH/2},{type:'record',emoji:'💿',x:tx+tW*.57,y:ty+tH/2},{type:'poster',emoji:'📜',x:tx+tW*.8,y:ty+tH/2}];
+  MG.state.tableItems=items;
+  MG.state.fans=[];
+  MG.state.sold=0;MG.state.totalFans=8;MG.state.spawnTimer=0;
+  MG.state.tx=tx;MG.state.ty=ty;MG.state.tW=tW;MG.state.tH=tH;
+  MG.state.draggingItem=null;
+  MG.raf=requestAnimationFrame(merchLoop);
+}
+function spawnFan(){
+  var W=MG.canvas.width,H=MG.canvas.height;
+  var wants=['hat','shirt','record','poster'];
+  var w=wants[Math.floor(Math.random()*wants.length)];
+  var emojis={hat:'🧢',shirt:'👕',record:'💿',poster:'📜'};
+  MG.state.fans.push({
+    x:Math.random()*W*.8+W*.1,y:H*.5+Math.random()*H*.3,
+    want:w,emoji:emojis[w],served:false,
+    bubbleTimer:120,col:['#ff2d78','#00f5ff','#39ff14','#bf5fff'][Math.floor(Math.random()*4)]
+  });
+}
+function merchLoop(){
+  if(MG.id!=='merch')return;
+  MG.state.spawnTimer++;
+  if(MG.state.spawnTimer%55===0&&MG.state.fans.filter(function(f){return!f.served;}).length<4&&MG.state.sold<MG.state.totalFans){
+    spawnFan();
+  }
+  drawMerch();
+  MG.raf=requestAnimationFrame(merchLoop);
+}
+function drawMerch(){
+  var c=MG.ctx,W=MG.canvas.width,H=MG.canvas.height,S=MG.state;
+  c.fillStyle='#0a000f';c.fillRect(0,0,W,H);
+  // Background crowd
+  for(var i=0;i<12;i++){c.fillStyle='rgba(255,45,120,0.08)';c.beginPath();c.arc(i*W/11,H*.75+Math.sin(i)*30,18,0,6.28);c.fill();}
+  // Neon sign
+  c.font='bold 14px Orbitron,sans-serif';c.textAlign='center';c.fillStyle='#ff2d78';c.shadowBlur=16;c.shadowColor='#ff2d78';c.fillText('⭐ CONCERT MERCH ⭐',W/2,H*.07);c.shadowBlur=0;
+  // Merch table
+  c.fillStyle='#1a0018';c.fillRect(S.tx,S.ty,S.tW,S.tH);
+  c.strokeStyle='#ff2d78';c.lineWidth=2;c.shadowBlur=8;c.shadowColor='#ff2d78';c.strokeRect(S.tx,S.ty,S.tW,S.tH);c.shadowBlur=0;
+  // Items on table
+  S.tableItems.forEach(function(it){
+    c.font='22px sans-serif';c.textAlign='center';c.fillText(it.emoji,it.x,it.y+8);
+  });
+  // Dragging item
+  if(S.draggingItem){c.font='28px sans-serif';c.textAlign='center';c.fillText(S.draggingItem.emoji,S.draggingItem.dx,S.draggingItem.dy);}
+  // Fans
+  S.fans.forEach(function(fan){
+    if(fan.served)return;
+    fan.bubbleTimer--;
+    drawMgStick(c,fan.x,fan.y,fan.col,null,Date.now()*.001+fan.x);
+    // Speech bubble
+    c.fillStyle='rgba(255,255,255,0.9)';c.beginPath();c.roundRect(fan.x-22,fan.y-54,44,32,6);c.fill();
+    c.font='17px sans-serif';c.textAlign='center';c.fillText(fan.emoji,fan.x,fan.y-28);
+    c.fillStyle=fan.col;c.beginPath();c.moveTo(fan.x-6,fan.y-22);c.lineTo(fan.x+6,fan.y-22);c.lineTo(fan.x,fan.y-14);c.fill();
+  });
+  // Score
+  c.fillStyle='#fff01f';c.font='10px Orbitron,sans-serif';c.textAlign='right';
+  c.fillText('SOLD: '+S.sold+' / '+S.totalFans,W-12,H*.95);
+  // Hint
+  c.fillStyle='rgba(255,255,255,0.3)';c.font='8px Orbitron,sans-serif';c.textAlign='center';
+  c.fillText('DRAG MERCH FROM TABLE TO FANS ASKING FOR IT',W/2,H*.98);
+}
+function mgMerchDown(x,y){
+  var S=MG.state;
+  // Pick up from table
+  S.tableItems.forEach(function(it){
+    if(Math.abs(x-it.x)<22&&Math.abs(y-it.y)<22){
+      S.draggingItem={type:it.type,emoji:it.emoji,dx:x,dy:y};
+    }
+  });
+}
+function mgMerchMove(x,y){
+  if(MG.state.draggingItem){MG.state.draggingItem.dx=x;MG.state.draggingItem.dy=y;}
+}
+function mgMerchUp(x,y){
+  var S=MG.state;
+  if(!S.draggingItem)return;
+  var dropped=false;
+  S.fans.forEach(function(fan){
+    if(fan.served)return;
+    var dx=x-fan.x,dy=y-fan.y;
+    if(Math.sqrt(dx*dx+dy*dy)<40){
+      if(fan.want===S.draggingItem.type){fan.served=true;S.sold++;setMGProgress((S.sold/S.totalFans)*100);}
+    }
+  });
+  S.draggingItem=null;
 }
 
 /* ═══════════════════════════════════════════════════════════
