@@ -1376,50 +1376,47 @@ function initTicketStars(){
 function setupTicketTear(){
   ticketTearPct=0;ticketTearing=false;
   document.getElementById('tearProgress').style.width='0%';
-  var tearEl=document.getElementById('ticketTearLine');
-  var wrap=document.getElementById('ticketWrap');
-  function getX(e){var r=tearEl.getBoundingClientRect();var src=e.touches?e.touches[0]:e;return src.clientX-r.left;}
-  function onDown(e){
-    var r=tearEl.getBoundingClientRect();
-    var src=e.touches?e.touches[0]:e;
-    if(src.clientY>=r.top-10&&src.clientY<=r.bottom+10){ticketTearing=true;ticketTearX=getX(e);}
-  }
-  function onMove(e){
-    if(!ticketTearing)return;
-    e.preventDefault();
-    var x=getX(e);
-    var w=tearEl.offsetWidth||300;
-    ticketTearPct=Math.max(ticketTearPct,Math.min(100,(x/w)*100));
-    document.getElementById('tearProgress').style.width=ticketTearPct+'%';
-    if(ticketTearPct>=90){
-      ticketTearing=false;
-      // Rip animation
-      wrap.style.transition='transform 0.3s ease,opacity 0.3s';
-      var topEl=document.getElementById('ticketTop'),botEl=document.getElementById('ticketBottom');
-      topEl.style.transition='transform 0.35s ease,opacity 0.35s';
-      botEl.style.transition='transform 0.35s ease,opacity 0.35s';
-      topEl.style.transform='translateY(-60px) rotate(-3deg)';topEl.style.opacity='0';
-      botEl.style.transform='translateY(60px) rotate(3deg)';botEl.style.opacity='0';
-      setTimeout(function(){
-        topEl.style.transform='';topEl.style.opacity='';
-        botEl.style.transform='';botEl.style.opacity='';
-        topEl.style.transition='';botEl.style.transition='';
-        attendShow();
-      },380);
+
+  // Reset ticket halves
+  var topEl=document.getElementById('ticketTop'),botEl=document.getElementById('ticketBottom');
+  topEl.style.transform='';topEl.style.opacity='';topEl.style.transition='';
+  botEl.style.transform='';botEl.style.opacity='';botEl.style.transition='';
+
+  var el=document.getElementById('ticketScreen');
+  var startX=0,startY=0,active=false;
+
+  function tearDown(cx,cy){active=true;startX=cx;startY=cy;}
+  function tearMove(cx,cy){
+    if(!active)return;
+    var dx=cx-startX;
+    // Only count leftward swipes or rightward swipes (horizontal drag)
+    if(Math.abs(dx)>Math.abs(cy-startY)*0.5){
+      ticketTearPct=Math.max(ticketTearPct,Math.min(100,(Math.abs(dx)/200)*100));
+      document.getElementById('tearProgress').style.width=ticketTearPct+'%';
+      if(ticketTearPct>=90&&!ticketTearing){
+        ticketTearing=true;active=false;
+        topEl.style.transition='transform 0.35s ease,opacity 0.35s';
+        botEl.style.transition='transform 0.35s ease,opacity 0.35s';
+        topEl.style.transform='translateY(-80px) rotate(-4deg)';topEl.style.opacity='0';
+        botEl.style.transform='translateY(80px) rotate(4deg)';botEl.style.opacity='0';
+        setTimeout(attendShow,380);
+      }
     }
   }
-  function onUp(){ticketTearing=false;}
-  // Remove old listeners by cloning
-  var nc=tearEl.cloneNode(true);tearEl.parentNode.replaceChild(nc,tearEl);
-  var fullDoc=document.getElementById('ticketScreen');
-  var nf=fullDoc.cloneNode(false);
-  // Use ticketScreen for touch since tear zone is small
-  document.getElementById('ticketScreen').addEventListener('mousedown',onDown);
-  document.getElementById('ticketScreen').addEventListener('mousemove',onMove);
-  document.getElementById('ticketScreen').addEventListener('mouseup',onUp);
-  document.getElementById('ticketScreen').addEventListener('touchstart',onDown,{passive:true});
-  document.getElementById('ticketScreen').addEventListener('touchmove',onMove,{passive:false});
-  document.getElementById('ticketScreen').addEventListener('touchend',onUp);
+  function tearUp(){active=false;}
+
+  // Clone to remove any old listeners
+  var newEl=el.cloneNode(true);el.parentNode.replaceChild(newEl,el);
+  // Re-grab references after clone
+  var ts=document.getElementById('ticketScreen');
+  ts.addEventListener('mousedown',function(e){tearDown(e.clientX,e.clientY);});
+  ts.addEventListener('mousemove',function(e){tearMove(e.clientX,e.clientY);});
+  ts.addEventListener('mouseup',tearUp);
+  ts.addEventListener('touchstart',function(e){var t=e.touches[0];tearDown(t.clientX,t.clientY);},{passive:true});
+  ts.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0];tearMove(t.clientX,t.clientY);},{passive:false});
+  ts.addEventListener('touchend',tearUp,{passive:true});
+  // Re-attach skip button (lost in clone)
+  ts.querySelector('button').addEventListener('click',skipVenue);
 }
 
 
@@ -1433,13 +1430,18 @@ var MG={
 
 var JOB_GAMES=['graffiti','trash','parking','windshield','pressure','dogwalk'];
 var MERCH_GAMES=['merch'];
+var jobGameIdx=-1; // -1 means next call gives graffiti first
 
 function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function pickNextJob(){
+  jobGameIdx=(jobGameIdx+1)%JOB_GAMES.length;
+  return JOB_GAMES[jobGameIdx];
+}
 
 function doJob(){
   document.getElementById('cityPop').classList.remove('show');
   popOpen=true;
-  launchMiniGame(pickRandom(JOB_GAMES),false,false);
+  launchMiniGame(pickNextJob(),false,false);
 }
 function doMerch(){
   document.getElementById('cityPop').classList.remove('show');
@@ -1452,7 +1454,7 @@ function brokePullOver(){
 }
 function brokeDoJob(){
   document.getElementById('brokePop').classList.remove('show');
-  launchMiniGame(pickRandom(JOB_GAMES),true,false);
+  launchMiniGame(pickNextJob(),true,false);
 }
 
 function launchMiniGame(id,fromBroke,fromMerch){
@@ -1466,9 +1468,8 @@ function launchMiniGame(id,fromBroke,fromMerch){
   document.getElementById('mgProgressPct').textContent='0%';
   MG.canvas=document.getElementById('mgCanvas');
   MG.ctx=MG.canvas.getContext('2d');
-  MG.canvas.width=window.innerWidth;
+  // (canvas sized after setupMGInput clone below)
   var hdr=document.getElementById('mgHeader');
-  MG.canvas.height=window.innerHeight-hdr.offsetHeight-38;
   var configs={
     graffiti:{title:'🖌️ ODD JOB — PAINT OVER THE GRAFFITI',reward:'$100',emoji:'🎨',msg:'The shop paid you $100 to clean up the wall!',label:'COVERED',color:'#39ff14'},
     trash:   {title:'🗑️ ODD JOB — CLEAN UP THE PARK',reward:'$100',emoji:'🌿',msg:'The city paid you $100 for cleaning up!',label:'CLEANED',color:'#39ff14'},
@@ -1487,10 +1488,16 @@ function launchMiniGame(id,fromBroke,fromMerch){
   document.getElementById('mgProgressBar').style.background=cfg.color;
   document.getElementById('mgProgressBar').style.boxShadow='0 0 8px '+cfg.color;
   document.getElementById('mgProgressPct').style.color=cfg.color;
-  // Init game
+  // Init input FIRST (clones canvas), THEN draw so art isn't wiped
+  setupMGInput();
+  // Re-grab canvas/ctx after clone
+  MG.canvas=document.getElementById('mgCanvas');
+  MG.ctx=MG.canvas.getContext('2d');
+  MG.canvas.width=window.innerWidth;
+  MG.canvas.height=window.innerHeight-document.getElementById('mgHeader').offsetHeight-38;
+  // Now draw
   var inits={graffiti:initGraffiti,trash:initTrash,parking:initParking,windshield:initWindshield,pressure:initPressure,dogwalk:initDogwalk,merch:initMerch};
   (inits[id]||initGraffiti)();
-  setupMGInput();
 }
 
 function setMGProgress(pct){
